@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "贴妥 PasteFit",
+  "version": "0.1.0",
+  "description": "将 Markdown 和网页选区复制为文档富文本或聊天文字，支持本地编辑、符号与 Emoji。",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "贴妥 · 网站与浮条设置",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "permissions": ["clipboardWrite", "activeTab", "scripting", "contextMenus", "storage"],
+  "optional_host_permissions": ["https://*/*"],
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "background": {
+    "service_worker": "assets/service-worker.js",
+    "type": "module"
+  }
+}

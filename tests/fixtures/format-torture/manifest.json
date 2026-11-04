@@ -1,0 +1,7 @@
+{
+  "requiredText": ["一级标题 H1", "六级标题 H6", "中文与 English，保留 Emoji 🎯。", "加粗重点", "斜体提示", "粗斜体组合", "删除内容", "软换行第一行", "硬换行第三行", "无序项目 A", "嵌套项目 B", "有序项目三", "已完成事项", "待办事项", "一级引用", "二级引用", "结构图", "Alpha", "Beta", "HTML 文本", "Markdown 重点"],
+  "requiredNumbers": ["3", "4", "42", "3.14"],
+  "requiredUrls": ["https://example.com/path?q=1", "https://example.com/diagram.png"],
+  "requiredCode": ["const answer = 42;", "console.log('代码块保留');", "inline_code()", "quote_code"],
+  "requiredEmoji": ["🎯"]
+}

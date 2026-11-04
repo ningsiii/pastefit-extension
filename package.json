@@ -1,0 +1,34 @@
+{
+  "name": "pastefit",
+  "version": "0.1.0",
+  "description": "Fit to paste. Chrome Extension.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "node scripts/build.mjs --watch",
+    "build": "node scripts/build.mjs",
+    "build:diagnostics": "node scripts/build-diagnostics.mjs",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\"",
+    "lint:fix": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" --fix",
+    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "jsdom": "^24.0.0",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^5.2.0",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "marked": "^15.0.12"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "fixtures": [
+    "basic", "heading-emphasis", "nested-list", "task-list", "quote-link", "code", "simple-table", "wide-table", "emoji-bilingual", "numbers-url", "image", "unsafe-html", "format-torture"
+  ]
+}

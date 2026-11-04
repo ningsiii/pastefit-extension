@@ -1,0 +1,19 @@
+:root{color-scheme:light;font:13px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;color:#1e2c50;background:#fff}
+*{box-sizing:border-box}
+body{width:260px;margin:0}
+main{padding:12px}
+header{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+header img{width:26px;height:26px}
+h1{font-size:16px;margin:0}
+header span{margin-left:auto;font-size:12px;color:#687b9e}
+[data-current]{margin:0 0 8px;font-size:11px;color:#7182a0;overflow-wrap:anywhere}
+section{border-top:1px solid #edf1f7;border-bottom:1px solid #edf1f7}
+label{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;cursor:pointer}
+input{width:16px;height:16px;margin:0;accent-color:#0876ed;cursor:pointer}
+input:focus-visible{outline:2px solid #ffaf36;outline-offset:3px}
+.note{margin:8px 0 0;font-size:11px;color:#7182a0}
+.status{margin:7px 0 0;font-size:12px;color:#2457a4;overflow-wrap:anywhere}
+.status:empty{display:none}
+.manage{display:block;width:100%;margin-top:8px;padding:5px 0;border:0;background:transparent;text-align:left;color:#0876ed;font:inherit;cursor:pointer}
+.manage:focus-visible{outline:2px solid #ffaf36}
+footer{margin-top:5px;text-align:right;font-size:10px;color:#7182a0}

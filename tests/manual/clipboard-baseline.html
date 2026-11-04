@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>PasteFit 剪贴板基线</title>
+<style>body{font:18px/1.6 sans-serif;max-width:800px;margin:40px auto}button{padding:12px;margin:8px}td,th{border:1px solid;padding:8px}table{border-collapse:collapse}</style>
+<h1>PasteFit 剪贴板基线</h1>
+<p>固定样本；不读取网页或聊天内容。复制后分别粘贴进空白 Word 和微信草稿，不发送。</p>
+<button id="copy">A：双格式复制</button><button id="event">B：copy 事件复制</button>
+<p id="status" role="status">等待复制</p>
+<section id="sample"><p>这是 <strong>原始粗体内容</strong>。</p><ul><li>第一项</li><li>第二项</li></ul><p>表格：</p><table border="1"><thead><tr><th>字段</th><th>内容</th></tr></thead><tbody><tr><td>Name</td><td>PasteFit</td></tr><tr><td>Mode</td><td>Smart Copy</td></tr></tbody></table><p>末尾检查：中文 ABC 123。</p></section>
+<script>
+const html = document.querySelector('#sample').innerHTML;
+const plain = '这是「原始粗体内容」。\n\n• 第一项\n• 第二项\n\n表格：\n字段：Name\n内容：PasteFit\n\n字段：Mode\n内容：Smart Copy\n\n末尾检查：中文 ABC 123。';
+const status = document.querySelector('#status');
+document.querySelector('#copy').onclick = async () => {
+ try { await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})})]); status.textContent='A 已写入 HTML + 聊天文字'; }
+ catch(e){status.textContent='A 失败：'+e.message;}
+};
+document.querySelector('#event').onclick = () => {
+ let written=false;
+ const handler=e=>{e.preventDefault();e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',plain);written=true;};
+ document.addEventListener('copy',handler);
+ try {const ok=document.execCommand('copy');status.textContent=ok&&written?'B 已写入 HTML + 聊天文字':'B 失败';}
+ finally{document.removeEventListener('copy',handler);}
+};
+</script></html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><title>贴妥：Word 复制诊断</title>
+<style>
+body{font:17px/1.6 system-ui,sans-serif;max-width:960px;margin:32px auto;padding:0 20px;color:#18202a}h1{font-size:28px}button{padding:12px 18px;margin:5px;border:1px solid #b7c5d5;border-radius:8px;background:#edf5ff;cursor:pointer}button:disabled{opacity:.45}textarea{box-sizing:border-box;width:100%;padding:12px;font:14px/1.5 monospace}#paste{height:86px;border:2px solid #1468d4}#report{height:220px}#source{height:220px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;background:#f4f6f8;padding:12px}#status{padding:14px;background:#fff4d6}td,th{border:1px solid #888;padding:5px}table{border-collapse:collapse}.columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:650px){.columns{grid-template-columns:1fr}}
+</style>
+<h1>贴妥：Word 复制诊断</h1>
+<p>这是诊断工具，不是已修复版本。只用固定样本，不上传、不保存、不主动读取剪贴板。</p>
+<ol>
+<li>点 <b>A：基线复制</b>，在下面蓝框按 <b>Ctrl+V</b>。</li>
+<li>到空白 Word 直接按 <b>Ctrl+V</b>，回来选择 Word 结果。</li>
+<li>再点 <b>B：Markdown 插件流程</b>，重复蓝框粘贴 → Word 粘贴 → 选择结果。</li>
+<li>最后点“复制诊断报告”，回聊天粘贴给我。中途不要复制截图或其他文字。</li>
+</ol>
+<button data-mode="baseline" disabled>A：基线复制</button>
+<button data-mode="markdown" disabled>B：Markdown 插件流程</button>
+<details><summary>补充对照（暂时不用点）</summary>
+<button data-mode="html-only" disabled>C：Markdown 只写 HTML</button>
+<button data-mode="selection" disabled>D：网页选区插件流程</button>
+<p>C 只用于诊断，不会更改插件的默认智能复制。</p></details>
+<p id="status" role="status">诊断代码未加载。若本行一直不变，请把此提示发给我。</p>
+<label for="paste">接收框：点击这里，按 Ctrl+V（此操作不改变剪贴板）</label>
+<textarea id="paste" placeholder="在这里粘贴刚复制的测试样本"></textarea>
+<p><label for="word">这一轮在 Word 中的结果：</label>
+<select id="word"><option>未测试</option><option>粗体、列表、完整表格均正常</option><option>只有聊天文字，没有表格</option><option>有表格，但正文或单元格丢失</option><option>无法粘贴或其他异常</option></select></p>
+<div class="columns"><section><h2>① 准备写出的格式</h2><pre id="sent"></pre></section><section><h2>② 粘贴回来的格式</h2><pre id="received"></pre></section></div>
+<p>② 是浏览器粘贴事件暴露的数据，不是 Windows 原始 CF_HTML 字节，也不代表 Word 已成功导入。</p>
+<button id="copy-report">最后一步：复制诊断报告</button>
+<p>此按钮会替换剪贴板，请先完成 A、B 的 Word 粘贴。报告含浏览器版本及粘贴内容中的表格、粗体文字，请只用固定样本，不要粘贴私人内容。</p>
+<textarea id="report" readonly aria-label="诊断报告"></textarea>
+<details><summary>固定输入样本</summary><textarea id="source" readonly aria-label="固定 Markdown 样本"></textarea><section id="rendered"></section></details>
+<script src="generated/clipboard-diagnostic.js"></script>
+</html>
