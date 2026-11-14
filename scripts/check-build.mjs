@@ -10,7 +10,7 @@ for (const name of ['content', 'selection', 'service-worker', 'popup', 'options'
 }
 const manifest = JSON.parse(readFileSync('dist/manifest.json', 'utf8'));
 assert.equal(manifest.action.default_popup, 'popup.html');
-assert.equal(manifest.version, '0.1.2');
+assert.equal(manifest.version, '0.1.3');
 assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, manifest.version);
 assert.equal(JSON.parse(readFileSync('package-lock.json', 'utf8')).version, manifest.version);
 assert.equal(manifest.options_ui.page, 'options.html');

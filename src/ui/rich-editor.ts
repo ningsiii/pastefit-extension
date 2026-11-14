@@ -1,3 +1,4 @@
+import { copyFailureMessage } from '../clipboard/focus-retry';
 import { documentHtmlAdapter } from '../adapters/document-html';
 import { normalizeHtml } from '../core/normalize-html';
 import type { SemanticDocument } from '../core/semantic-document';
@@ -148,7 +149,7 @@ export const openRichEditor = (initial: SemanticDocument, write = writeDocument,
       const reviewed = Boolean(visual || reviewedHtml === editor.innerHTML);
       const warnings = write === writeDocument ? await writeDocument(currentDocument(), copyMode, undefined, reviewed, wpsCompatible) : await write(currentDocument(), copyMode);
       copiedFeedback(warnings ?? []);
-    } catch (error) { documentCopy.textContent = '复制失败'; feedback.textContent = error instanceof Error ? `复制失败：${error.message}` : '复制失败，请重试。'; }
+    } catch (error) { documentCopy.textContent = '复制失败'; feedback.textContent = `复制失败：${copyFailureMessage(error)}`; }
     finally { copying = false; documentCopy.disabled = false; }
   };
   actions.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none';

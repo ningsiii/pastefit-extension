@@ -1,4 +1,4 @@
-import { getWpsFormulaPreference } from './formula-preference';
+import { getWpsFormulaPreference, getPagesFormulaPreference } from './formula-preference';
 import { inspectDocument, type ReviewTarget } from '../core/preflight';
 import type { SemanticDocument } from '../core/semantic-document';
 import { reviewDocument } from '../ui/copy-review';
@@ -19,11 +19,12 @@ export const reviewedCopy = async (doc: SemanticDocument, mode: CopyMode = 'smar
   const reviewed = needsReview ? await reviewDocument(doc, target, false, mode === 'chat') : doc;
   if (!reviewed) throw new CopyCancelled();
   // An explicit WPS preference takes precedence over the optional Pages data.
-  if (!formulaSource && mode === 'smart' && writer === undefined && /Mac/.test(navigator.platform) && report.formulas.length) {
+  if (!formulaSource && mode === 'smart' && writer === undefined && /Mac/.test(navigator.platform) && report.formulas.length && await getPagesFormulaPreference()) {
     let enabled: boolean;
     try { enabled = (await chrome.runtime.sendMessage({ type: 'pastefit:native-enabled' })).ok; }
     catch { throw new Error('贴妥已更新，请刷新网页后重试。'); }
-    if (enabled) return copyPagesNative(reviewed, true);
+    if (!enabled) throw new Error('Pages 公式兼容尚未就绪，请完成设置或关闭 Pages 开关。');
+    return copyPagesNative(reviewed, true);
   }
   return writeDocument(reviewed, mode, writer, formulaSource);
 };

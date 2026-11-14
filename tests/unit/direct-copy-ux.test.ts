@@ -32,8 +32,9 @@ it('does not turn unsupported MathML into live HTML or discard nested table cont
 });
 it('exposes one smart action, keeps Mac setup in options and recovers after native failure', async () => {
   clipboard(); const sendMessage = vi.fn().mockRejectedValue(new Error('Extension context invalidated.'));
-  vi.stubGlobal('chrome', { storage: { local: { get: vi.fn(async () => ({ 'pastefit.copyTarget': 'office' })) } }, runtime: { sendMessage } });
+  vi.stubGlobal('chrome', { storage: { local: { get: vi.fn(async () => ({ 'pastefit.copyTarget': 'office', 'pastefit.pagesFormulaCompatible': true })) } }, runtime: { sendMessage } });
   const panel = openRichEditor(html('<p><span data-math-source="x">x</span></p>'));
+  await vi.waitFor(() => expect(panel.querySelector('a')).not.toBeNull());
   const button = [...panel.querySelectorAll('button')].find(b => b.textContent === '贴妥智能复制')!;
   expect(button).toBeDefined(); expect(button.closest('details')).toBeNull(); expect(button.hidden).toBe(false); expect(panel.querySelector('a')!.closest('[aria-label="复制设置面板"]')).not.toBeNull(); expect(panel.textContent).not.toContain('复制到 Pages'); button.click(); expect(button.disabled).toBe(true);
   await vi.waitFor(() => expect(button.disabled).toBe(false)); expect(panel.querySelector('[role="status"]')!.textContent).toContain('贴妥已更新，请刷新网页后重试。');
@@ -52,7 +53,7 @@ it('ends a stalled request with a recoverable timeout instead of leaving the cop
 
 it('uses one Mac smart request with native equations, MathML HTML and complete text', async () => {
   const writer = clipboard(); const sendMessage = vi.fn(async message => message.type === 'pastefit:native-enabled' ? { ok: true } : { ok: true });
-  vi.stubGlobal('chrome', { runtime: { sendMessage } });
+  vi.stubGlobal('chrome', { storage: { local: { get: vi.fn(async () => ({ 'pastefit.pagesFormulaCompatible': true })) } }, runtime: { sendMessage } });
   const { reviewedCopy } = await import('../../src/clipboard/reviewed-copy');
   const doc = html('<p>START <span data-math-source="\\frac{a+b}{2}">f</span> <span data-math-source="\\unknowncommand{x}">bad</span> END</p>');
   const warnings = await reviewedCopy(doc);
@@ -73,7 +74,7 @@ it.each(['no-formula', 'unconfigured', 'windows'])('keeps browser copy without n
   const copied = await read(writer.write.mock.calls[0][0][0].data['text/html']); expect(copied).toContain('END'); expect(copied).not.toContain('<img');
 });
 it('does not overwrite the clipboard with a fallback if the native conversion detects a competing copy', async () => {
-  const writer = clipboard(); vi.stubGlobal('chrome', { runtime: { sendMessage: vi.fn(async message => message.type === 'pastefit:native-enabled' ? { ok: true } : { ok: false, code: 'clipboard-changed' }) } });
+  const writer = clipboard(); vi.stubGlobal('chrome', { storage: { local: { get: vi.fn(async () => ({ 'pastefit.pagesFormulaCompatible': true })) } }, runtime: { sendMessage: vi.fn(async message => message.type === 'pastefit:native-enabled' ? { ok: true } : { ok: false, code: 'clipboard-changed' }) } });
   const { reviewedCopy } = await import('../../src/clipboard/reviewed-copy');
   await expect(reviewedCopy(html('<span data-math-source="x">x</span>'))).rejects.toThrow('剪贴板发生变化');
   expect(writer.write).not.toHaveBeenCalled(); expect(writer.writeText).not.toHaveBeenCalled();
@@ -87,21 +88,21 @@ it.each(['MacIntel', 'Win32'])('keeps heading-only smart copy in the browser on 
   expect(sendMessage).not.toHaveBeenCalled(); expect(writer.write).toHaveBeenCalledOnce();
 });
 
-it('places a regular check acknowledgement above the captured selection and removes a prior busy notice', () => {
+it('places a regular check acknowledgement at top center and removes a prior busy notice', () => {
   vi.useFakeTimers();
   const busy = copyNotice([], { pending: true, anchor: { left: 40, top: 160, bottom: 180 } });
   expect(busy.textContent).toBe('复制中…'); expect(busy.querySelector('svg')).toBeNull();
   const notice = copyNotice([], { anchor: { left: 40, top: 160, bottom: 180 } });
-  expect(busy.isConnected).toBe(false); expect(notice.style.left).toBe('40px');
-  expect(parseFloat(notice.style.top)).toBeLessThan(160);
+  expect(busy.isConnected).toBe(false); expect(notice.style.left).toBe('50%');
+  expect(notice.style.top).toBe('24px'); expect(notice.style.transform).toBe('translateX(-50%)');
   expect(notice.querySelector('svg path')!.getAttribute('d')).toBe('M3 8l3 3 7-7');
   expect(notice.textContent).toBe('已复制');
   vi.advanceTimersByTime(2500); expect(notice.isConnected).toBe(false);
 });
-it('keeps a selection-edge acknowledgement visible below the text and falls back when there is no selection', () => {
+it('keeps the same top-center acknowledgement for edge selections and no selection', () => {
   vi.useFakeTimers(); window.getSelection()!.removeAllRanges(); expect(copyNoticeAnchor()).toBeNull();
   const edge = copyNotice([], { anchor: { left: innerWidth + 20, top: 0, bottom: 20 } });
-  expect(edge.style.top).toBe('28px'); expect(parseFloat(edge.style.left)).toBeLessThanOrEqual(innerWidth - 8);
+  expect(edge.style.top).toBe('24px'); expect(edge.style.left).toBe('50%');
   const fallback = copyNotice([], { anchor: null }); expect(fallback.style.top).toBe('24px');
 });
 it('confirms editor copy on the original button with a regular icon and supports another copy', async () => {
@@ -112,4 +113,31 @@ it('confirms editor copy on the original button with a regular icon and supports
   expect(button.querySelector('svg path')!.getAttribute('d')).toBe('M3 8l3 3 7-7'); expect(button.disabled).toBe(false);
   button.click(); await vi.waitFor(() => expect(write).toHaveBeenCalledTimes(2));
   expect(JSON.stringify(write.mock.calls[0][0])).not.toMatch(/已复制|copy-check|M3 8/);
+});
+
+it('keeps global feedback centered while selection geometry respects internally clipped lines', () => {
+  document.body.innerHTML = '<div style="overflow:auto"><p>Long selection</p></div>';
+  const box = document.querySelector('div')!;
+  vi.spyOn(box, 'getBoundingClientRect').mockReturnValue({ left: 80, right: 500, top: 100, bottom: 300 } as DOMRect);
+  const range = document.createRange();
+  Object.defineProperty(range, 'getClientRects', { value: () => [
+    { left: 85, right: 160, top: 20, bottom: 40 },
+    { left: 85, right: 160, top: 110, bottom: 130 },
+    { left: 85, right: 160, top: 270, bottom: 290 },
+    { left: 85, right: 160, top: 330, bottom: 350 }
+  ] as unknown as DOMRectList });
+  range.selectNodeContents(document.querySelector('p')!);
+  window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
+  expect(copyNoticeAnchor()).toEqual({ left: 85, top: 110, bottom: 290 });
+  const fullWidthControl = document.createElement('button'); document.body.append(fullWidthControl);
+  vi.spyOn(fullWidthControl, 'getBoundingClientRect').mockReturnValue({ left: 0, right: innerWidth, top: 0, bottom: 108, width: innerWidth, height: 108 } as DOMRect);
+  const notice = copyNotice([], { anchor: copyNoticeAnchor() });
+  expect(notice.style.top).toBe('24px'); expect(notice.style.left).toBe('50%');
+});
+it('does not shift a global acknowledgement into a corner because of selection controls', () => {
+  const button = document.createElement('button'); document.body.append(button);
+  vi.spyOn(button, 'getBoundingClientRect').mockReturnValue({ left: 0, right: innerWidth, top: 80, bottom: 300, width: innerWidth, height: 220 } as DOMRect);
+  const notice = copyNotice([], { anchor: { left: 40, top: 100, bottom: 200 } });
+  expect(notice.style.top).toBe('24px'); expect(notice.style.left).toBe('50%');
+  expect(parseFloat(notice.style.top)).toBeLessThan(80);
 });

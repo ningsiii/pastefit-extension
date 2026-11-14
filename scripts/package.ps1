@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $releasePath = Join-Path $PSScriptRoot '..\release'
 $distPath = Join-Path $PSScriptRoot '..\dist'
-$zipPath = Join-Path $releasePath 'pastefit-0.1.2.zip'
+$zipPath = Join-Path $releasePath 'pastefit-0.1.3.zip'
 
 if (-not (Test-Path (Join-Path $distPath 'manifest.json'))) { throw 'Run npm run build before npm run package.' }
 New-Item -ItemType Directory -Force -Path $releasePath | Out-Null

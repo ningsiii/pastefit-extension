@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { getWpsFormulaPreference, setWpsFormulaPreference, wpsFormulaKey } from '../../src/clipboard/formula-preference';
+import { getWpsFormulaPreference, setWpsFormulaPreference, wpsFormulaKey, pagesFormulaKey, getPagesFormulaPreference } from '../../src/clipboard/formula-preference';
 import { mountFormulaSettings } from '../../src/ui/formula-settings';
 import { reviewedCopy } from '../../src/clipboard/reviewed-copy';
 import { normalizeMarkdown } from '../../src/core/normalize-markdown';
@@ -45,7 +45,7 @@ it('shows Pages only on Mac and blocks the switch on read failure', async () => 
   vi.stubGlobal('navigator', { platform: 'MacIntel' }); get.mockRejectedValueOnce(new Error('disk'));
   root.replaceChildren(); await mountFormulaSettings(root);
   expect(root.querySelector('a')?.textContent).toBe('设置 Pages 可编辑公式 →');
-  expect(root.querySelector<HTMLInputElement>('input')?.disabled).toBe(true);
+  expect(root.querySelector<HTMLInputElement>('[aria-label="Pages 可编辑公式"]')?.disabled).toBe(true);
   expect(root.textContent).toContain('读取失败');
 });
 it.each(['MacIntel', 'Win32'])('applies the saved preference to smart copy without changing chat text on %s', async platform => {
@@ -88,4 +88,26 @@ it('does not silently copy a different formula format when saved settings cannot
   await expect(reviewedCopy(doc, 'smart', writer)).rejects.toThrow('disk');
   expect(writer.write).not.toHaveBeenCalled();
   await reviewedCopy(doc, 'chat', writer); expect(writer.writeText).toHaveBeenCalledOnce();
+});
+
+// The legacy ready flag is capability, not a saved preference.
+it('does not launch Pages just because the helper was installed and tested', async () => {
+  const data: Record<string, unknown> = { 'pastefit.nativeReady': true };
+  const sendMessage = vi.fn();
+  vi.stubGlobal('chrome', { storage: { local: { get: vi.fn(async () => data), set: vi.fn(async values => Object.assign(data, values)) } }, runtime: { getURL: (s: string) => s, sendMessage } });
+  const writer = { write: vi.fn().mockResolvedValue(undefined), writeText: vi.fn() };
+  vi.stubGlobal('ClipboardItem', class { constructor(public data: Record<string, Blob>) {} });
+  vi.stubGlobal('navigator', { platform: 'MacIntel', clipboard: writer });
+  const root = document.createElement('div'); document.body.append(root); await mountFormulaSettings(root);
+  const toggle = root.querySelector<HTMLInputElement>('[aria-label="Pages 可编辑公式"]')!;
+  expect(toggle.checked).toBe(false);
+  const doc = normalizeMarkdown({ kind: 'markdown', content: '$x_i$' }).document;
+  await reviewedCopy(doc); expect(sendMessage).not.toHaveBeenCalled(); expect(writer.write).toHaveBeenCalledOnce();
+  toggle.click(); await tick(); expect(await getPagesFormulaPreference()).toBe(true);
+  const next = document.createElement('div'); await mountFormulaSettings(next);
+  expect(next.querySelector<HTMLInputElement>('[aria-label="Pages 可编辑公式"]')!.checked).toBe(true);
+  sendMessage.mockResolvedValue({ ok: false });
+  await expect(reviewedCopy(doc)).rejects.toThrow('尚未就绪'); expect(writer.write).toHaveBeenCalledOnce();
+  toggle.click(); await tick(); expect(data[pagesFormulaKey]).toBe(false);
+  await reviewedCopy(doc); expect(writer.write).toHaveBeenCalledTimes(2);
 });

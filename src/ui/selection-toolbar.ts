@@ -1,3 +1,5 @@
+import { copyFailureMessage } from '../clipboard/focus-retry';
+import { visibleSelectionAnchor } from './selection-geometry';
 import { copyNotice } from './copy-notice';
 import { captureSelection } from '../extension/capture-selection';
 import { normalize } from '../extension/workflow';
@@ -10,29 +12,6 @@ import { confirmCopy, copyBlue } from './copy-feedback';
 const marker = 'data-pastefit-selection-toolbar';
 const excluded = 'input,textarea,[contenteditable]:not([contenteditable="false"]),[role="textbox"],button,a,dialog,[data-pastefit-editor-panel]';
 const elementOf = (node: Node): Element | null => node instanceof Element ? node : node.parentElement;
-// Range rectangles include text clipped by nested scrolling containers. Anchor
-// only to visible selected text, above the first visible line of the selection.
-const visibleAnchor = (range: Range): { left: number; top: number; bottom: number } | null => {
-  let left = 0; let right = innerWidth; let top = 0; let bottom = innerHeight;
-  for (let ancestor = elementOf(range.commonAncestorContainer); ancestor; ancestor = ancestor.parentElement) {
-    const css = getComputedStyle(ancestor);
-    const clipX = /^(auto|scroll|hidden|clip)$/.test(css.overflowX || css.overflow);
-    const clipY = /^(auto|scroll|hidden|clip)$/.test(css.overflowY || css.overflow);
-    if (!clipX && !clipY) continue;
-    const bounds = ancestor.getBoundingClientRect();
-    if (clipX) { left = Math.max(left, bounds.left); right = Math.min(right, bounds.right); }
-    if (clipY) { top = Math.max(top, bounds.top); bottom = Math.min(bottom, bounds.bottom); }
-  }
-  if (left >= right || top >= bottom) return null;
-  const rects = [...range.getClientRects()];
-  for (let index = 0; index < rects.length; index++) {
-    const rect = rects[index];
-    if (rect.bottom <= top || rect.top >= bottom || rect.right <= left || rect.left >= right) continue;
-    return { left: Math.max(left, rect.left), top: Math.max(top, rect.top),
-      bottom: Math.min(bottom, Math.max(...rects.filter(line => line.bottom > top && line.top < bottom && line.right > left && line.left < right).map(line => line.bottom))) };
-  }
-  return null;
-};
 
 export const mountSelectionToolbar = (
   write = writeDocument,
@@ -52,7 +31,8 @@ export const mountSelectionToolbar = (
     button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:28px;font:inherit;font-weight:600;border:0;padding:4px 12px;cursor:pointer;white-space:nowrap;text-shadow:0 1px 2px #24416b66}
     button:focus-visible{outline:2px solid #18202a;outline-offset:-3px}
     button:disabled{opacity:.5}
-    .primary{width:80px;gap:4px;padding:4px 8px;background:${copyBlue};color:#fff;padding-right:17px;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+    .primary,.edit{width:80px;flex:0 0 80px}
+    .primary{gap:4px;padding:4px 8px;background:${copyBlue};color:#fff;padding-right:17px;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
     .primary:hover{filter:brightness(1.04)}
     .edit{background:linear-gradient(115deg,#fff3d2aa 0%,#fff6be18 45%,#ffffff20 100%),linear-gradient(145deg,#ffe580e6 0%,#ffb12ce6 33%,#ff891ae6 70%,#ff5d32e6 100%);color:#fff;padding-left:17px;margin-left:-8px;clip-path:polygon(10px 0,100% 0,100% 100%,0 100%)}
     .edit:hover{filter:brightness(1.04)}
@@ -90,7 +70,7 @@ export const mountSelectionToolbar = (
     const doc = current; const version = generation; window.clearTimeout(feedbackTimer); copy.disabled = true; copy.textContent = '复制中…';
     void write(doc).then((warnings) => { if (generation === version) { status.textContent = '已复制'; confirmCopy(copy); feedbackTimer = window.setTimeout(() => { if (generation === version) copy.textContent = '复制'; }, 2000); if (warnings?.length) copyNotice(warnings); } }, (error: unknown) => {
       if (generation === version) {
-        status.textContent = error instanceof CopyCancelled ? error.message : '复制失败，请点编辑后重试';
+        status.textContent = error instanceof CopyCancelled ? error.message : `复制失败：${copyFailureMessage(error)}`;
         copy.textContent = error instanceof CopyCancelled ? '已取消' : '复制失败';
         copy.title = status.textContent;
       }
@@ -109,7 +89,7 @@ export const mountSelectionToolbar = (
   // Never hide or intercept the page's own selection tools.
   const position = (): void => {
     if (!current || !sourceRange || !valid()) return;
-    const anchor = visibleAnchor(sourceRange);
+    const anchor = visibleSelectionAnchor(sourceRange);
     if (!anchor) { host.style.display = 'none'; return; }
     host.style.display = 'block';
     const size = host.getBoundingClientRect();
@@ -159,7 +139,7 @@ export const mountSelectionToolbar = (
     try {
       const input = captureSelection(); if (!input) return;
       const doc = normalize(input).document;
-      const rect = visibleAnchor(range);
+      const rect = visibleSelectionAnchor(range);
       if (!rect) return;
       current = doc; sourceRange = range.cloneRange(); sourceText = text; status.textContent = ''; copy.disabled = false; copy.textContent = '复制'; copy.title = '贴妥智能复制';
       position();

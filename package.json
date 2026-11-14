@@ -1,6 +1,6 @@
 {
   "name": "pastefit",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Fit to paste. Chrome Extension.",
   "type": "module",
   "engines": {
@@ -9,7 +9,6 @@
   "scripts": {
     "dev": "node scripts/build.mjs --watch",
     "build": "node scripts/build.mjs",
-    "build:diagnostics": "node scripts/build-diagnostics.mjs",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "typecheck": "tsc --noEmit",

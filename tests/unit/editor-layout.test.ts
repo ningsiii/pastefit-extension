@@ -67,7 +67,7 @@ it('waits for persisted setting saves before copying and removes the live prefer
   const input = panel.querySelector<HTMLInputElement>('input')!;
   await vi.waitFor(() => expect(input.disabled).toBe(false)); expect(listeners.size).toBe(1);
   input.click(); click(panel, '贴妥智能复制'); await Promise.resolve(); expect(write).not.toHaveBeenCalled();
-  finish(); await vi.waitFor(() => expect(write).toHaveBeenCalledOnce());
+  await vi.waitFor(() => expect(finish).toBeTypeOf('function')); finish(); await vi.waitFor(() => expect(write).toHaveBeenCalledOnce());
   expect(write.mock.calls[0][1]).toBe('wps');
   listeners.forEach(fn => fn({ [wpsFormulaKey]: { newValue: true } }, 'local')); expect(input.checked).toBe(true);
   panel.querySelector<HTMLButtonElement>('[aria-label="关闭编辑器"]')!.click(); expect(listeners.size).toBe(0);

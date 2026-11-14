@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "贴妥 PasteFit",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "将 Markdown 和网页选区复制为文档富文本或聊天文字，支持本地编辑、符号与 Emoji。",
   "icons": {
     "16": "icons/icon16.png",
