@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>PF44 WPS Markdown整段粘贴测试</title><button id="copy-source">复制整段Markdown源码</button><p id="copy-status"></p><pre># PF44-PASTE-START 标题
+
+正文 Before $\frac{a+b}{2}$ after，H₂O 与 x²。
+
+## 二级标题
+
+独立矩阵：
+
+$$
+\begin{pmatrix}a&amp;b\\c&amp;d\end{pmatrix}
+$$
+
+3. 第三项
+4. 第四项
+
+| 名称 | 表内公式 |
+| --- | --- |
+| 结果 | $x_i$ |
+
+末尾 PF44-PASTE-END。
+</pre><script>document.getElementById("copy-source").onclick=async()=>{try{await navigator.clipboard.writeText("# PF44-PASTE-START \u6807\u9898\n\n\u6b63\u6587 Before $\\frac{a+b}{2}$ after\uff0cH\u2082O \u4e0e x\u00b2\u3002\n\n## \u4e8c\u7ea7\u6807\u9898\n\n\u72ec\u7acb\u77e9\u9635\uff1a\n\n$$\n\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}\n$$\n\n3. \u7b2c\u4e09\u9879\n4. \u7b2c\u56db\u9879\n\n| \u540d\u79f0 | \u8868\u5185\u516c\u5f0f |\n| --- | --- |\n| \u7ed3\u679c | $x_i$ |\n\n\u672b\u5c3e PF44-PASTE-END\u3002\n");document.getElementById("copy-status").textContent="已复制PF44-PASTE整段Markdown源码"}catch(e){document.getElementById("copy-status").textContent="复制未完成："+e.message}}</script>

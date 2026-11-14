@@ -1,0 +1,21 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>贴妥：三软件复制前检查</title>
+<style>body{max-width:900px;margin:24px auto;font:17px/1.6 sans-serif;background:#e3ecdc}article{padding:20px;border:1px solid #889;background:white}td,th{border:1px solid #888;padding:8px}table{border-collapse:collapse}pre{white-space:pre-wrap}button{font:inherit;padding:6px 12px}</style>
+<h1>Pages / Word / WPS 复制前检查</h1>
+<p>扩展重新加载后刷新本页。点“选中样本”，右键“贴妥智能复制”；需要主动排查时用“贴妥编辑”→“显示隐藏字符”。Word、WPS 使用同一次复制的结果，不选择目标软件。只有可处理疑点才在复制前显示原文标色；不选择就保持原样。点击正文标记可以处理此处/同类、保留或撤销，并切换查看处理后效果。也可在编辑器中开启“显示隐藏字符”，原地排查后再复制，不另开网页。取消整段复制不写入整段；复制单个公式源是独立操作。</p>
+<button id="select">选中样本</button>
+<article id="sample">
+<h2 style="background:white;color:navy;font-family:serif">检查样本：首段 START123</h2>
+<p style="background:black;color:white">源黑底白字应被清理，保留<strong>粗体</strong>、H<sub>2</sub>O 和 x<sup>2</sup>。</p>
+<p>特殊空白：A&nbsp;B，C&#8239;D，E&#8203;F。普通空格 A B 和数学中点 a·b 应保留。</p>
+<p>语言字符保留：می&#8204;روم；Emoji 👨‍👩‍👧‍👦 与 👩🏽‍💻。方向字符示例 A&#8206;B。</p>
+<p>引用残留示例：citeturn1search0；占位示例：[待补充]。默认保留；必须主动选择才删除。</p>
+<p>字面 Markdown：**这段是正文中的字面星号**。标点前空格示例：正文 ，后文。</p>
+<p>公式 <span data-math-source="\frac{a+b}{2}">(a+b)/2</span>，矩阵 <span data-math-source="\begin{pmatrix}a&amp;b\\c&amp;d\end{pmatrix}">(a b; c d)</span>。</p>
+<table><tr><th rowspan="2">合并 A</th><th colspan="2">结果</th></tr><tr><td>表内&nbsp;空格</td><td>123</td></tr><tr><td>B</td><td>456</td><td>789</td></tr></table>
+<ol start="3"><li>第三项</li><li>第四项</li></ol>
+<pre><code>  const literal = "A B​C";
+    // 代码缩进和内部字符不处理</code></pre>
+<p>末尾检查 END987。</p>
+</article>
+<p>逐软件记录平台与版本，以及普通/深色/护眼/编辑标记/打印预览；没有对应模式记 N/A。核对首尾、代码、上下标、列表与表格内容完整。正常公式/表格本身不弹出检查。Mac 已启用可选增强时，支持的 Pages 公式应可双击编辑；未启用时不保证。Word/WPS 请实际双击测试可编辑性，不以外观判断。</p>
+<script>document.getElementById('select').onclick=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById('sample'));const s=getSelection();s.removeAllRanges();s.addRange(r)};</script></html>

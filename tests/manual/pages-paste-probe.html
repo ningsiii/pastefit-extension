@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><title>Pages 原生公式剪贴板诊断</title>
+<style>body{font:16px/1.6 sans-serif;max-width:1000px;margin:30px auto}textarea{width:100%;height:230px}pre{white-space:pre-wrap;overflow-wrap:anywhere}button{font:inherit}</style>
+<h1>Pages 原生公式剪贴板诊断</h1><p>仅用于本机合成公式。先在 Pages 中选中原生公式复制，再在下方框中粘贴。此页仅通过本次粘贴事件查看浏览器能收到的数据，不读取系统剪贴板、不联网、不保存内容。</p>
+<textarea id="paste" aria-label="粘贴合成公式进行诊断"></textarea><h2>本次粘贴的数据类型</h2><pre id="types"></pre><h2>HTML</h2><textarea id="html" readonly aria-label="粘贴的 HTML"></textarea><h2>纯文本</h2><textarea id="plain" readonly aria-label="粘贴的纯文本"></textarea>
+<h2>RTF</h2><textarea id="rtf" readonly aria-label="粘贴的 RTF"></textarea><script>document.getElementById('paste').addEventListener('paste',e=>{e.preventDefault();document.getElementById('types').textContent=JSON.stringify({types:[...e.clipboardData.types],items:[...e.clipboardData.items].map(i=>({type:i.type,kind:i.kind})),files:[...e.clipboardData.files].map(f=>({type:f.type,size:f.size,name:f.name}))},null,2);document.getElementById('html').value=e.clipboardData.getData('text/html');document.getElementById('plain').value=e.clipboardData.getData('text/plain');document.getElementById('rtf').value=e.clipboardData.getData('text/rtf');});</script>
+
+<h2>浏览器写入能力与直接粘贴试验</h2><pre id="support"></pre>
+<button id="copy-math">复制无图片 MathML 样本</button><p id="result"></p>
+<script>
+const types=['text/plain','text/html','image/png','text/rtf','application/mathml+xml','web application/mathml+xml'];
+document.getElementById('support').textContent=types.map(t=>t+': '+(typeof ClipboardItem==='undefined'?'unavailable':ClipboardItem.supports(t))).join('\n');
+document.getElementById('copy-math').onclick=()=>{const math='<math xmlns="http://www.w3.org/1998/Math/MathML"><mfrac><mrow><mi>a</mi><mo>+</mo><mi>b</mi></mrow><mn>2</mn></mfrac></math>';const copy=e=>{e.preventDefault();e.clipboardData.setData('text/html','<p>PASTE-PROBE-START '+math+' PASTE-PROBE-END</p>');e.clipboardData.setData('text/plain','PASTE-PROBE-START (a+b)/2 PASTE-PROBE-END');};document.addEventListener('copy',copy,{once:true});const ok=document.execCommand('copy');document.getElementById('result').textContent=ok?'已写入标准 HTML MathML；请直接粘贴到合成 Pages 文稿。':'复制失败';};
+</script>

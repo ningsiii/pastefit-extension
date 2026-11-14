@@ -1,19 +1,28 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { Script } from 'node:vm';
 import assert from 'node:assert/strict';
-for (const name of ['content', 'selection', 'service-worker', 'popup', 'options']) {
+for (const name of ['content', 'selection', 'service-worker', 'popup', 'options', 'pages-native-setup']) {
   const source = readFileSync(`dist/assets/${name}.js`, 'utf8');
+  assert(![...source].some(char => { const point = char.codePointAt(0); return (point & 0xffff) >= 0xfffe || (point >= 0xfdd0 && point <= 0xfdef); }), 'Extension script contains Unicode noncharacters rejected by Chrome scripting');
+  new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(`dist/assets/${name}.js`));
   new Script(source, { filename: `${name}.js` });
   assert(!source.includes('import('), 'Injected scripts must not dynamically import modules');
 }
 const manifest = JSON.parse(readFileSync('dist/manifest.json', 'utf8'));
 assert.equal(manifest.action.default_popup, 'popup.html');
-assert.equal(manifest.version, '0.1.0');
+assert.equal(manifest.version, '0.1.1');
 assert.equal(JSON.parse(readFileSync('package.json', 'utf8')).version, manifest.version);
 assert.equal(JSON.parse(readFileSync('package-lock.json', 'utf8')).version, manifest.version);
 assert.equal(manifest.options_ui.page, 'options.html');
 assert(existsSync('dist/options.html') && existsSync('dist/options.css'));
 assert(existsSync('dist/popup.html') && existsSync('dist/popup.css'));
+assert(existsSync('dist/pages-native.html') && existsSync('dist/pages-native.css'));
+for (const name of ['install', 'security', 'accessibility', 'automation', 'ready']) {
+  const png = readFileSync(`dist/setup/${name}.png`);
+  assert.equal(png.subarray(1, 4).toString('ascii'), 'PNG', 'Setup screenshot must exist as a local PNG');
+}
+assert(existsSync('dist/mac-setup-help.html'), 'Complete screenshot instructions must ship with the extension');
+assert(process.env.PASTEFIT_MAC_TEST_INSTALLER || !existsSync('dist/installers'), 'Ordinary extension builds must not bundle native executables');
 const popupCss = readFileSync('dist/popup.css', 'utf8');
 assert(popupCss.includes('width:260px'), 'Settings popup must retain its compact width');
 assert(popupCss.includes('.status:empty{display:none}'), 'Empty feedback must not reserve popup space');

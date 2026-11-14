@@ -24,7 +24,7 @@ it('offers explicit copy without changing selection or writing automatically', a
   const down = new MouseEvent('mousedown', { cancelable: true }); button('智能复制').dispatchEvent(down);
   expect(down.defaultPrevented).toBe(true); expect(window.getSelection()!.toString()).toBe('Selected');
   button('智能复制').click(); await Promise.resolve();
-  expect(write).toHaveBeenCalledTimes(1); expect(host().shadowRoot!.textContent).toContain('已贴妥');
+  expect(write).toHaveBeenCalledTimes(1); expect(host().shadowRoot!.textContent).toContain('已复制');
 });
 it('retains captured document for editing and hides toolbar', () => {
   const edit = vi.fn(); dispose = mountSelectionToolbar(vi.fn(), edit); show(); button('编辑 / Emoji').click();
@@ -155,7 +155,7 @@ it('opens Emoji directly and inserts and undoes an added emoji', () => {
   expect((panel.querySelector('[aria-label="常用符号"]') as HTMLElement).style.display).toBe('none');
   (panel.querySelector('[aria-label="插入庆祝"]') as HTMLButtonElement).click();
   expect(panel.querySelector('[role="textbox"]')!.textContent).toContain('🎉');
-  ([...panel.querySelectorAll('button')].find(b => b.textContent === '撤销插入')!).click();
+  panel.querySelector('[role="textbox"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true, cancelable: true }));
   expect(panel.querySelector('[role="textbox"]')!.textContent).toBe('Text');
   expect(numberedEmojis).toHaveLength(10); expect(commonEmojis).toHaveLength(24);
 });

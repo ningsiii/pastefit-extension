@@ -1,11 +1,15 @@
+export type ReferenceIssue = 'missing-note' | 'duplicate-note' | 'unreferenced-note' | 'missing-target' | 'ambiguous-target';
+
 export type InlineNode =
-  | { readonly type: 'text'; readonly value: string }
+  | { readonly type: 'text'; readonly value: string; readonly anchor?: string; readonly referenceIssue?: ReferenceIssue; readonly referenceLabel?: string }
   | { readonly type: 'break'; readonly hard: boolean }
   | { readonly type: 'emphasis'; readonly children: readonly InlineNode[] }
   | { readonly type: 'strong'; readonly children: readonly InlineNode[] }
+  | { readonly type: 'underline' | 'superscript' | 'subscript'; readonly children: readonly InlineNode[] }
+  | { readonly type: 'math'; readonly source: string; readonly format: 'latex' | 'mathml'; readonly display: boolean }
   | { readonly type: 'delete'; readonly children: readonly InlineNode[] }
   | { readonly type: 'code'; readonly value: string }
-  | { readonly type: 'link'; readonly href: string; readonly children: readonly InlineNode[] }
+  | { readonly type: 'link'; readonly href: string; readonly title?: string; readonly children: readonly InlineNode[] }
   | { readonly type: 'image'; readonly alt: string; readonly src?: string };
 
 export type BlockNode =
@@ -23,9 +27,17 @@ export interface ListItem {
   readonly children: readonly BlockNode[];
 }
 
+export interface TableCellMeta {
+  readonly rowSpan: number;
+  readonly colSpan: number;
+  readonly header: boolean;
+  readonly blocks: readonly BlockNode[];
+}
+
 export interface TableRow {
   readonly header: boolean;
   readonly cells: readonly (readonly InlineNode[])[];
+  readonly cellMeta?: readonly TableCellMeta[];
 }
 
 export interface SemanticDocument {

@@ -1,0 +1,24 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>贴妥 · Pages 标题兼容测试</title>
+<style>body{max-width:850px;margin:32px auto;padding:24px;font:17px/1.7 system-ui}article{padding:24px;border:1px solid #aaa}button{font:inherit;padding:8px 18px}td,th{border:1px solid #999;padding:8px}table{border-collapse:collapse}</style>
+<h1>Pages 标题兼容测试</h1><p>本轮只确认含公式的原生增强路径中前三层标题样式；四到六级按用户决定留给手动调整。普通HTML复制不保证Pages段落样式。选中样本→右键智能复制→Pages新文稿正常粘贴。不选择目标软件，不打开中间文件。</p>
+<p>点击H1～H6，在右侧“格式→文本”顶部查看段落样式。本机中文Pages原生增强路径前三级显示“小标题／小标题2／小标题3”；四到六级虽在中间导入时有样式，跨文稿粘贴未保留，不算通过。每个P段落应为“正文”。不要手动套用样式掩盖导入结果。</p>
+<button data-select="full">选中含公式样本</button><article id="full">
+<h1>H1 一级标题 · PF37-START</h1><p>P1：正文。</p>
+<h2>H2 二级标题 A</h2><p>P2：正文。</p>
+<h3>H3 三级标题</h3><p>P3：正文。</p>
+<h4>H4 四级标题</h4><p>P4：正文。</p>
+<h5>H5 五级标题</h5><p>P5：正文。</p>
+<h6>H6 六级标题</h6><p>P6：正文。</p>
+<h2>H2 二级标题 B</h2><p>重复二级标题应使用同一段落样式。</p>
+<p>正文含<strong>重点</strong>、<em>斜体</em>、H<sub>2</sub>O、x<sup>2</sup>，公式 <span data-math-source="\frac{a+b}{2}">(a+b)/2</span>。</p>
+<table><tr><th rowspan="2">分组 A</th><th colspan="2">结果</th></tr><tr><td>123</td><td><span data-math-source="x_i">x_i</span></td></tr><tr><td>B</td><td>空格在右侧</td><td></td></tr></table>
+<pre><code># 这是代码，不是一级标题
+  const text = "Heading 1";</code></pre><p>末尾：PF37-END。</p></article>
+<p>第二份没有公式，走普通浏览器复制，只核对文字和基本外观，不承诺Pages原生标题样式。</p><button data-select="plain">选中无公式样本</button><article id="plain"></article>
+<script>
+const plain=document.getElementById('full').cloneNode(true);plain.removeAttribute('id');
+for(const math of plain.querySelectorAll('[data-math-source]'))math.replaceWith(document.createTextNode('普通文字'));
+plain.innerHTML=plain.innerHTML.replaceAll('PF37-START','PF37-PLAIN-START').replaceAll('PF37-END','PF37-PLAIN-END');
+document.getElementById('plain').replaceChildren(...plain.childNodes);
+for(const b of document.querySelectorAll('button[data-select]'))b.onclick=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById(b.dataset.select));const s=getSelection();s.removeAllRanges();s.addRange(r)};
+</script></html>

@@ -1,2 +1,4 @@
 import { mountSiteManager } from '../ui/site-manager';
-void mountSiteManager(document.querySelector<HTMLElement>('#app')!);
+import { mountFormulaSettings } from '../ui/formula-settings';
+const root = document.querySelector<HTMLElement>('#app')!;
+void mountSiteManager(root).then(() => mountFormulaSettings(root));

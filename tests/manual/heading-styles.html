@@ -1,0 +1,18 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>贴妥 · 标题样式复测</title>
+<style>body{max-width:850px;margin:32px auto;padding:24px;font:17px/1.7 system-ui;color:#222}article{padding:24px;border:1px solid #aaa}button{font:inherit;padding:8px 18px}table{border-collapse:collapse}td,th{border:1px solid #999;padding:8px}.instructions{background:#f0f5ff;padding:18px}</style>
+<h1>标题样式复测</h1><div class="instructions"><p>点“选中样本”，右键“贴妥智能复制”，到 Word/WPS 新空白文档正常粘贴。这里只检测标题样式，不要求固定字号、居中或缩进。</p><p>依次点击 H1～H6 那一行文字，查看“开始→样式”的当前值。预期分别为“标题 1”到“标题 6”（英文界面可能为 Heading 1～6）。小一/小二是字号，不算样式名；导航和折叠三角也不能单独作为通过依据。不要手动套用标题来掩盖粘贴结果。</p><p>每个标题后的说明行应为正文。最后再核对公式可编辑、表格合并及末尾完整。新版已在本机 Word 核对标题1～6、正文、可编辑公式及合并表格；Windows Word/WPS 仍需分别复测。Pages 的原生标题样式不在此次已验证范围。</p></div>
+<button id="select" type="button">选中样本</button>
+<article id="sample">
+<h1>H1 一级标题 · PF36-START</h1><p>P1：这行应该是正文，不应该继续沿用标题样式。</p>
+<h2>H2 二级标题 A</h2><p>P2：正文。</p>
+<h3>H3 三级标题</h3><p>P3：正文。</p>
+<h4>H4 四级标题</h4><p>P4：正文。</p>
+<h5>H5 五级标题</h5><p>P5：正文。</p>
+<h6>H6 六级标题</h6><p>P6：正文。</p>
+<h2>H2 二级标题 B</h2><p>H2 A 与 H2 B 应属于同一种标题样式，而非各自的临时格式。</p>
+<p>正文含<strong>重点</strong>、<em>斜体</em>、H<sub>2</sub>O、x<sup>2</sup>，公式 <span data-math-source="\frac{a+b}{2}">(a+b)/2</span>。</p>
+<table><tr><th rowspan="2">分组 A</th><th colspan="2">结果</th></tr><tr><td>123</td><td><span data-math-source="x_i">x_i</span></td></tr><tr><td>B</td><td>空格在右侧</td><td></td></tr></table>
+<pre><code># 这是代码，不是一级标题
+  const text = "Heading 1";</code></pre>
+<p>末尾：PF36-END。</p>
+</article><script>document.getElementById('select').onclick=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById('sample'));const s=getSelection();s.removeAllRanges();s.addRange(r)};</script></html>

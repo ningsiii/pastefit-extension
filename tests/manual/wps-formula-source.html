@@ -1,0 +1,8 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>贴妥 · WPS 公式源码测试</title>
+<style>body{max-width:850px;margin:30px auto;font:17px/1.6 system-ui;color:#18202a}article{border:1px solid #aaa;padding:20px}table{border-collapse:collapse}td,th{border:1px solid #888;padding:8px}button{font:inherit;padding:8px 14px}</style>
+<h1>WPS 公式源码测试</h1><p>打开贴妥编辑→开启“WPS 公式兼容”→点原来的“贴妥智能复制”，再到空白 WPS 文稿普通粘贴。正文、表格和编号应保留，公式应为完整源码，没有串接的渲染文字。</p><p>在兼容预览中点中对应源码→“复制此公式”→WPS「插入→公式」→粘贴并回车；确认原生公式后再删除正文中对应的源码。Word 继续使用普通智能复制。</p>
+<button id="edit">通过当前构建打开贴妥编辑</button>
+<article id="sample"><h1>PF45-START 一级标题</h1><p>正文 <strong>重点</strong>、H<sub>2</sub>O、x<sup>2</sup>，分式 <span data-math-source="\frac{a+b}{2}">分式</span>。</p><h2>二级标题</h2><p><span display="block" data-math-source="\begin{pmatrix}a&amp;b\\c&amp;d\end{pmatrix}">矩阵</span></p><ol start="3"><li>第三项</li><li>第四项</li></ol><table><tr><th rowspan="2">合并A</th><th>公式</th></tr><tr><td><span data-math-source="x_i">下标</span></td></tr></table><pre><code>代码 $x^2$ 应保持原样</code></pre><p>末尾 PF45-END。</p></article>
+<script>
+document.getElementById('edit').onclick=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById('sample'));const s=getSelection();s.removeAllRanges();s.addRange(r);window.__pastefitAction='edit';const script=document.createElement('script');script.src='../../dist/assets/selection.js';script.onload=()=>script.remove();script.onerror=()=>alert('请先构建扩展');document.body.append(script)};
+</script></html>

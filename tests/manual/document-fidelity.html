@@ -1,0 +1,37 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>贴妥文稿格式复测</title>
+<style>body{max-width:850px;margin:30px auto;padding:24px;background:#e3ecdc;font:17px/1.7 sans-serif;color:#222}article{padding:20px;border:1px solid #777}table{border-collapse:collapse}td,th{border:1px solid #888;padding:8px}.source{background:#fff;color:#111}.hidden{display:none}pre{white-space:pre-wrap;background:#eee}</style>
+<h1>贴妥文稿格式复测</h1>
+<p>点“选中样本”，右键→贴妥 PasteFit→贴妥智能复制，等待“已复制”，然后到目标软件粘贴。</p>
+<button id="select" type="button">选中样本</button>
+<p>检查普通、深色/护眼、编辑标记和打印预览。核对首尾、底纹、公式编辑能力、列表段落和表格合并关系；不要把源页面绿色背景作为输出要求。</p>
+<article id="sample">
+<h2 class="source">文稿样本：首段检查 123 ABC</h2>
+<p class="source">正文含<strong>重点</strong>、<em>斜体</em>、<u>下划线</u>、H<sub>2</sub>O、x<sup>2</sup>和文献<sup><a href="https://example.org/paper">[1]</a></sup>。<span style="display:none!important">不应复制的隐藏按钮文字</span></p>
+<p>行内公式 <span data-math-source="\frac{a+b}{2}">（a+b）/2</span> 与正文混排。</p>
+<div data-math-source="\begin{pmatrix}a&amp;b\\c&amp;d\end{pmatrix}" display="block">矩阵公式（应保留四个元素）</div>
+<ol start="3"><li><p>第三项第一段。</p><p>第三项第二段。</p><ul><li>嵌套要点</li></ul></li><li>第四项。</li></ol>
+<table><tr><th rowspan="2">实验 A</th><th colspan="2">观察结果</th></tr><tr><td><p>第一段</p><p>第二段</p></td><td>数值 <span data-math-source="x^2">x²</span></td></tr><tr><th>实验 B</th><td>空单元格 →</td><td></td></tr></table>
+<p>必要字符：10&nbsp;kg，窄空格 10&#8239;kg，Emoji 👨‍👩‍👧‍👦。手动换行：<br>换行后正文。</p>
+<pre><code>  const literal = "$x^2$";
+    // 保留缩进与字面量</code></pre>
+<p>转换失败示例 <span data-math-source="\unknowncommand{x}">原式</span>：应显示原式并提示，不应消失。</p>
+<p>末尾检查：结束 END 987。</p>
+</article>
+<h2>Markdown 输入样本</h2><p>选中下方 textarea 中全部文字，用右键菜单复制，核对正文、表格及公式。</p>
+<textarea rows="17" style="width:100%"># 文稿标题
+
+**重点**，H<sub>2</sub>O，与行内公式 \(x^2\)。
+
+$$
+\frac{a+b}{2}
+$$
+
+| 名称 | 表达式 |
+| --- | --- |
+| 结果 | $x_i$ |
+
+代码 `$x^2$` 应保持原样。
+
+末尾 END 987。</textarea>
+<script>document.getElementById("select").onclick=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById("sample"));const s=getSelection();s.removeAllRanges();s.addRange(r)};</script>
+</html>

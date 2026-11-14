@@ -1,4 +1,4 @@
-import { writeDocument } from '../../clipboard/rich';
+import { reviewedCopy as writeDocument, CopyCancelled } from '../../clipboard/reviewed-copy';
 import { normalize } from '../../extension/workflow';
 import { openRichEditor } from '../../ui/rich-editor';
 
@@ -40,8 +40,8 @@ export const mountPasteFit = (root: ParentNode = document): void => {
       button.disabled = true;
       try {
         await writeDocument(normalize({ kind: 'html', content: extractHtml(response) }).document);
-        setFeedback(button, '已贴妥');
-      } catch { setFeedback(button, '复制失败，请用编辑重试'); }
+        setFeedback(button, '已复制');
+      } catch (error) { setFeedback(button, error instanceof CopyCancelled ? '已取消复制' : '复制失败，请用编辑重试'); }
       finally { button.disabled = false; }
     });
     response.append(button);

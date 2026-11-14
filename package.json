@@ -1,6 +1,6 @@
 {
   "name": "pastefit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Fit to paste. Chrome Extension.",
   "type": "module",
   "engines": {
@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\"",
     "lint:fix": "eslint \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" --fix",
-    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1"
+    "package": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1",
+    "build:mac-test": "zsh scripts/build-mac-test.sh"
   },
   "author": "",
   "license": "MIT",
@@ -29,6 +30,8 @@
     "vitest": "^2.0.0"
   },
   "dependencies": {
-    "marked": "^15.0.12"
+    "marked": "^15.0.12",
+    "marked-footnote": "1.4.0",
+    "temml": "0.14.0"
   }
 }

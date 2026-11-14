@@ -1,3 +1,4 @@
+import { mathSelector } from '../core/math';
 import type { ContentInput } from '../core/input';
 
 const compactText = (value: string): string => value.replace(/\s+/g, ' ').trim();
@@ -74,6 +75,23 @@ const restoreSelectedTableCells = (fragment: DocumentFragment, range: Range): vo
   });
 };
 
+// Preserve caption position from the real page without importing its visual
+// styling or pulling in captions outside the selected range.
+const restoreSelectedCaptionStyles = (fragment: ParentNode, range: Range): void => {
+  const source = [...document.querySelectorAll('caption')].filter(caption => {
+    try { return range.intersectsNode(caption); } catch { return false; }
+  });
+  const clones = [...fragment.querySelectorAll('caption')];
+  if (source.length !== clones.length) return;
+  clones.forEach((clone, index) => {
+    const caption = source[index]; const style = window.getComputedStyle(caption);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') { clone.remove(); return; }
+    const parent = caption.closest('table');
+    const side = style.captionSide || (parent ? window.getComputedStyle(parent).captionSide : '');
+    if (side === 'top' || side === 'bottom') clone.style.captionSide = side;
+  });
+};
+
 export const captureSelection = (): ContentInput | null => {
   const active = document.activeElement;
   if (active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) {
@@ -87,7 +105,16 @@ export const captureSelection = (): ContentInput | null => {
   if (markdown !== null) return { kind: 'markdown', content: markdown };
   const container = document.createElement('div');
   for (let i = 0; i < selection.rangeCount; i++) {
-    const range = selection.getRangeAt(i);
+    const range = selection.getRangeAt(i).cloneRange();
+    const formulaRoot = (node: Node): Element | null => {
+      const element = node instanceof Element ? node : node.parentElement;
+      let root = element?.closest(mathSelector) ?? null;
+      for (let parent = root?.parentElement?.closest(mathSelector); parent; parent = parent.parentElement?.closest(mathSelector)) root = parent;
+      return root;
+    };
+    const startMath = formulaRoot(range.startContainer); const endMath = formulaRoot(range.endContainer);
+    if (startMath) range.setStartBefore(startMath);
+    if (endMath) range.setEndAfter(endMath);
     const clonedContents = range.cloneContents();
     restoreSelectedTableCells(clonedContents, range);
     let fragment: Node = clonedContents;
@@ -99,18 +126,32 @@ export const captureSelection = (): ContentInput | null => {
         const first = items.findIndex((item) => range.intersectsNode(item));
         if (first >= 0) wrapper.setAttribute('start', String(ancestor.start + first));
       }
+      if (ancestor.matches(mathSelector)) {
+        // A formula is atomic: copying only its rendered numerator must not lose
+        // the source annotation or create a malformed equation.
+        fragment = ancestor.cloneNode(true);
+        ancestor = ancestor.parentElement;
+        continue;
+      }
       wrapper.append(fragment);
       fragment = wrapper;
       ancestor = ancestor.parentElement;
     }
+    restoreSelectedCaptionStyles(fragment as ParentNode, range);
     container.append(fragment);
   }
   for (const element of container.querySelectorAll('[href], [src]')) {
     for (const attr of ['href', 'src']) {
       const value = element.getAttribute(attr);
-      if (value) { try { element.setAttribute(attr, new URL(value, document.baseURI).href); } catch { element.removeAttribute(attr); } }
+      if (attr === 'href' && value?.startsWith('#')) continue;
+      if (value) { try {
+        const resolved = new URL(value, document.baseURI);
+        const page = new URL(document.URL);
+        const local = attr === 'href' && resolved.origin === page.origin && resolved.pathname === page.pathname && resolved.search === page.search && resolved.hash;
+        element.setAttribute(attr, local ? resolved.hash : resolved.href);
+      } catch { element.removeAttribute(attr); } }
     }
   }
-  const structured = container.querySelector('h1,h2,h3,h4,h5,h6,strong,b,em,i,del,s,ul,ol,table,pre,code,a,img,blockquote,br');
+  const structured = container.querySelector('h1,h2,h3,h4,h5,h6,strong,b,em,i,del,s,ul,ol,table,pre,code,a,img,blockquote,br,u,sup,sub,math,.katex,.katex-display,mjx-container,[data-math-source],[data-math]');
   return structured ? { kind: 'html', content: container.innerHTML } : { kind: 'markdown', content: selection.toString() };
 };

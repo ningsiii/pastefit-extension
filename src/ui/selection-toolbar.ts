@@ -1,6 +1,7 @@
+import { copyNotice } from './copy-notice';
 import { captureSelection } from '../extension/capture-selection';
 import { normalize } from '../extension/workflow';
-import { writeDocument } from '../clipboard/rich';
+import { reviewedCopy as writeDocument, CopyCancelled } from '../clipboard/reviewed-copy';
 import type { SemanticDocument } from '../core/semantic-document';
 import { openRichEditor } from './rich-editor';
 import { sites } from '../extension/site-settings';
@@ -11,7 +12,7 @@ const excluded = 'input,textarea,[contenteditable]:not([contenteditable="false"]
 const elementOf = (node: Node): Element | null => node instanceof Element ? node : node.parentElement;
 const hasFormatting = (doc: SemanticDocument): boolean => doc.children.some(block =>
   ['heading', 'list', 'table', 'quote'].includes(block.type) ||
-  (block.type === 'paragraph' && block.children.some(inline => ['strong', 'emphasis', 'delete'].includes(inline.type))));
+  (block.type === 'paragraph' && block.children.some(inline => ['strong', 'emphasis', 'delete', 'underline', 'superscript', 'subscript', 'math'].includes(inline.type))));
 
 // Range rectangles include text clipped by nested scrolling containers. Anchor
 // only to visible selected text, not the last logical line of a long code block.
@@ -72,8 +73,8 @@ export const mountSelectionToolbar = (
   const copy = button('智能复制', () => {
     if (!current || !valid()) { hide(); return; }
     const doc = current; const version = generation; copy.disabled = true;
-    void write(doc).then(() => { if (generation === version) status.textContent = '已贴妥'; }, () => {
-      if (generation === version) status.textContent = '复制失败，请点编辑后重试';
+    void write(doc).then((warnings) => { if (generation === version) { status.textContent = '已复制'; if (warnings?.length) copyNotice(warnings); } }, (error: unknown) => {
+      if (generation === version) status.textContent = error instanceof CopyCancelled ? error.message : '复制失败，请点编辑后重试';
     }).finally(() => { copy.disabled = false; });
   }, 'primary');
   button('编辑 / Emoji', () => {

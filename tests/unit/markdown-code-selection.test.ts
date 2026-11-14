@@ -41,7 +41,12 @@ it('captures unlabelled highlighted block code without pre and preserves every n
   const read = (blob: Blob) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsText(blob);
   });
-  expect(await read(items[0].data['text/html'])).toBe(html);
+  const copied = new DOMParser().parseFromString(await read(items[0].data['text/html']), 'text/html');
+  expect(copied.querySelector('head style')!.textContent).toContain('mso-outline-level:1');
+  expect(copied.querySelector('meta[name="ProgId"]')!.getAttribute('content')).toBe('Word.Document');
+  expect(copied.querySelector('h1')!.hasAttribute('style')).toBe(false);
+  copied.querySelectorAll('p.MsoNormal').forEach(p => p.removeAttribute('class'));
+  expect(copied.body.innerHTML.replace(/<!--(?:Start|End)Fragment-->/g, '')).toBe(new DOMParser().parseFromString(html, 'text/html').body.innerHTML);
   expect(await read(items[0].data['text/plain'])).toBe(chat);
 });
 it('supports the same highlighted structure inside pre without relying on CSS classes', () => {

@@ -1,0 +1,21 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>贴妥 · 注释与引用测试</title>
+<style>body{max-width:850px;margin:32px auto;padding:24px;font:17px/1.7 system-ui;color:#222}article,textarea{box-sizing:border-box;width:100%;padding:24px;border:1px solid #aaa}button{font:inherit;padding:8px 18px;margin:10px 0}textarea{height:330px}</style>
+<h1>注释与引用测试</h1><p>选中样本后右键“贴妥智能复制”，到新空白 Word/WPS/Pages 正常粘贴。编号和说明都应保留；文内跳转不保证，剪贴板会去掉可能误回网页的链接。这里保留的是正文中的注释，不会自动生成 Word 页底脚注或自动更新的交叉引用。</p>
+<button onclick="const r=document.createRange();r.selectNodeContents(document.getElementById('sample'));const s=getSelection();s.removeAllRanges();s.addRange(r)">选中网页样本</button>
+<article id="sample"><h2>PF38-START：引用样本</h2><p>研究结论<sup><a id="ref-a" href="#note-a">[1]</a></sup>，再次引用<sup><a href="#note-a">[1]</a></sup>。</p><p>如表2所示，参见第3.1节和公式（4）。</p><p id="note-a">[1] 补充说明第一段。<a href="#ref-a">返回正文</a></p><p>补充说明第二段，不能丢失。</p><p>[2] 张某. 示例论文. 2026. <a href="https://example.org/paper" title="论文来源">来源链接</a></p><p>末尾：PF38-END。</p></article>
+<h2>Markdown 样本</h2><p>在文本框里全选，右键智能复制。第一处有说明，第二处没有说明：复制后应显示简短提醒；点开才查看详情。</p>
+<textarea spellcheck="false"># PF38-MD-START
+
+结论[^a]，再次引用[^a]，缺失说明[^missing]。
+
+[^a]: 完整说明第一段。
+
+    完整说明第二段。
+
+    - 说明中的要点
+    - [来源](https://example.org/paper "论文来源")
+
+[1] 张某. 示例论文. 2026.
+
+末尾：PF38-MD-END。</textarea>
+</html>
