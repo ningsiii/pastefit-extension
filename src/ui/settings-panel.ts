@@ -1,4 +1,4 @@
-import { settingKey, supportedSite, storedSites, sitePattern } from '../extension/site-settings';
+import { settingKey, supportedSite, storedSites, sitePattern, restrictedPageMessage } from '../extension/site-settings';
 import { enableSite } from '../extension/site-access';
 
 export const mountSettingsPanel = async (root: HTMLElement): Promise<void> => {
@@ -12,13 +12,15 @@ export const mountSettingsPanel = async (root: HTMLElement): Promise<void> => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     site = supportedSite(tab?.url ?? '');
-    current.textContent = site ? `${site.name} · ${site.host}` : '当前页面不支持浮条';
+    const restriction = restrictedPageMessage(tab?.url ?? '');
+    current.textContent = restriction ?? (site ? `${site.name} · ${site.host}` : '当前页面不支持浮条');
+    if (!site) root.querySelector('.note')!.textContent = '请在普通 HTTPS 网页使用';
   } catch { current.textContent = '当前网站读取失败'; }
   let values: Record<string, unknown>;
   try { values = await chrome.storage.local.get(null); }
   catch { status.textContent = '设置读取失败，请关闭后重新打开。'; return; }
   try {
-    const enabled = await Promise.all(storedSites(values).filter(entry => entry.enabled).map(entry => chrome.permissions.contains({ origins: [sitePattern(entry.host)] })));
+    const enabled = await Promise.all(storedSites(values).filter(entry => entry.enabled && !restrictedPageMessage(`https://${entry.host}/`)).map(entry => chrome.permissions.contains({ origins: [sitePattern(entry.host)] })));
     manage.textContent = `管理网站（已开启 ${enabled.filter(Boolean).length} 个）`;
   } catch { status.textContent = '授权状态读取失败'; return; }
   if (site) {
@@ -34,7 +36,7 @@ export const mountSettingsPanel = async (root: HTMLElement): Promise<void> => {
       const enabled = toggle.checked; toggle.disabled = true;
       void enableSite(host, enabled).then(async () => {
         status.textContent = enabled ? '浮条已开启，请刷新网页' : '浮条已关闭';
-        const saved = storedSites(await chrome.storage.local.get(null)).filter(entry => entry.enabled);
+        const saved = storedSites(await chrome.storage.local.get(null)).filter(entry => entry.enabled && !restrictedPageMessage(`https://${entry.host}/`));
         manage.textContent = `管理网站（已开启 ${saved.length} 个）`;
       }).catch(error => { toggle.checked = !enabled; status.textContent = error instanceof Error ? error.message : '保存失败，请重试'; }).finally(() => { toggle.disabled = false; });
     });

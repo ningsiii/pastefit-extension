@@ -1,4 +1,4 @@
-import { parseSite, settingKey, setSiteEnabled, sitePattern, storedSites } from './site-settings';
+import { parseSite, settingKey, setSiteEnabled, sitePattern, storedSites, restrictedPageMessage } from './site-settings';
 
 export const syncSites = async (): Promise<void> => {
   const result = await chrome.runtime.sendMessage({ type: 'pastefit:sync-sites' });
@@ -8,6 +8,8 @@ export const syncSites = async (): Promise<void> => {
 // Called directly from a click/change handler: request before any async read.
 export const addSite = async (input: string): Promise<void> => {
   const host = parseSite(input);
+  const restriction = restrictedPageMessage(`https://${host}/`);
+  if (restriction) throw new Error(restriction);
   if (!await chrome.permissions.request({ origins: [sitePattern(host)] })) throw new Error('未获授权，未添加网站');
   const values = await chrome.storage.local.get(settingKey(host));
   if (typeof values[settingKey(host)] !== 'boolean') await setSiteEnabled(host, false);
@@ -15,6 +17,8 @@ export const addSite = async (input: string): Promise<void> => {
 };
 export const enableSite = async (host: string, enabled: boolean): Promise<void> => {
   const pattern = sitePattern(host);
+  const restriction = restrictedPageMessage(`https://${host}/`);
+  if (enabled && restriction) throw new Error(restriction);
   if (enabled && !await chrome.permissions.request({ origins: [pattern] })) throw new Error('未获授权，浮条保持关闭');
   await setSiteEnabled(host, enabled);
   try { await syncSites(); }
@@ -36,7 +40,7 @@ export const reconcileSites = (): Promise<void> => {
     const entries = storedSites(await chrome.storage.local.get(null));
     const wanted = new Map<string, string>();
     for (const { host, enabled } of entries) {
-      if (!enabled) continue;
+      if (!enabled || restrictedPageMessage(`https://${host}/`)) continue;
       const pattern = sitePattern(host);
       if (await chrome.permissions.contains({ origins: [pattern] })) wanted.set(`pastefit-site-${host}`, pattern);
       else await setSiteEnabled(host, false);

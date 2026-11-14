@@ -4,6 +4,17 @@ export const sites = [
   { host: 'www.doubao.com', name: '豆包', selector: '[data-testid="message-content"], [class*="markdown"], [class*="answer-content"]' }
 ] as const;
 
+export const restrictedPageMessage = (input: string): string | undefined => {
+  try {
+    const url = new URL(input);
+    if (['chrome:', 'chrome-extension:', 'devtools:', 'about:'].includes(url.protocol) ||
+      ['chrome.google.com', 'chromewebstore.google.com'].includes(url.hostname)) {
+      return 'Chrome 限制，此页面无法使用贴妥';
+    }
+  } catch { /* Invalid input is handled by the existing HTTPS parser. */ }
+  return undefined;
+};
+
 export const settingKey = (host: string): string => `pastefit.toolbar.${host}`;
 export const parseSite = (input: string): string => {
   const text = input.trim();
@@ -25,6 +36,7 @@ export const storedSites = (values: Record<string, unknown>): { host: string; en
 });
 export const supportedSite = (url: string) => {
   try {
+    if (restrictedPageMessage(url)) return undefined;
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:') return undefined;
     const host = parseSite(url);

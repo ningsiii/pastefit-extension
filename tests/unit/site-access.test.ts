@@ -121,3 +121,20 @@ it('popup stays one switch regardless of list size and keeps management accessib
   await mountSettingsPanel(document.body); expect(document.querySelectorAll('input')).toHaveLength(0);
   document.querySelector<HTMLButtonElement>('.manage')!.click(); expect(chrome.runtime.openOptionsPage).toHaveBeenCalled();
 });
+
+it('rejects known restricted store hosts before asking for permissions and unregisters stale entries', async () => {
+  for (const host of ['chrome.google.com', 'chromewebstore.google.com']) {
+    await expect(addSite(host)).rejects.toThrow('Chrome 限制');
+    await expect(enableSite(host, true)).rejects.toThrow('Chrome 限制');
+  }
+  expect(request).not.toHaveBeenCalled();
+  values[settingKey('chrome.google.com')] = true;
+  grants.add(sitePattern('chrome.google.com'));
+  scripts = [{ id: 'pastefit-site-chrome.google.com', matches: [sitePattern('chrome.google.com')] }];
+  await reconcileSites(); expect(scripts).toEqual([]);
+  expect(remove).not.toHaveBeenCalled();
+  await mountSiteManager(document.body);
+  const toggle = document.querySelector<HTMLInputElement>('input[role="switch"]')!;
+  expect(toggle.disabled).toBe(true); expect(toggle.checked).toBe(false);
+  expect(document.body.textContent).toContain('Chrome 限制');
+});

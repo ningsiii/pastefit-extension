@@ -94,3 +94,15 @@ it('popup rolls back failed saves and exposes failed reads without actionable sw
   get.mockRejectedValue(new Error('denied')); await mountSettingsPanel(document.body);
   expect(document.querySelectorAll('input')).toHaveLength(0); expect(document.body.textContent).toContain('设置读取失败');
 });
+
+it.each(['https://chrome.google.com/webstore/devconsole/', 'https://chromewebstore.google.com/detail/test', 'chrome://settings/'])('does not offer a misleading switch or right-click promise on restricted %s', async url => {
+  vi.mocked(chrome.tabs.query).mockResolvedValue([{ url }]);
+  get.mockResolvedValue({ [settingKey('chrome.google.com')]: true });
+  await mountSettingsPanel(document.body);
+  expect(supportedSite(url)).toBeUndefined();
+  expect(document.querySelector('input')).toBeNull();
+  expect(document.body.textContent).toContain('Chrome 限制，此页面无法使用贴妥');
+  expect(document.body.textContent).not.toContain('右键仍可');
+  expect(document.body.textContent).toContain('已开启 0 个');
+  expect(supportedSite('https://chrome.google.com.example.test/')).toBeDefined();
+});

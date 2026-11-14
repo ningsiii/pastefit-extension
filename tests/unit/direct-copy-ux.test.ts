@@ -3,7 +3,7 @@ import { normalizeHtml } from '../../src/core/normalize-html';
 import { pagesNativeTransfer } from '../../src/adapters/pages-native-xml';
 import { copyPagesNative } from '../../src/clipboard/pages-native';
 import { openRichEditor } from '../../src/ui/rich-editor';
-import { copyNotice } from '../../src/ui/copy-notice';
+import { copyNotice, copyNoticeAnchor } from '../../src/ui/copy-notice';
 const html = (content: string) => normalizeHtml({ kind: 'html', content }).document;
 const read = (blob: Blob) => new Promise<string>(resolve => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(blob); });
 const clipboard = () => {
@@ -85,4 +85,31 @@ it.each(['MacIntel', 'Win32'])('keeps heading-only smart copy in the browser on 
   const { reviewedCopy } = await import('../../src/clipboard/reviewed-copy');
   await reviewedCopy(html('<h1>START</h1><p>Body</p><h6>END</h6>'));
   expect(sendMessage).not.toHaveBeenCalled(); expect(writer.write).toHaveBeenCalledOnce();
+});
+
+it('places a regular check acknowledgement above the captured selection and removes a prior busy notice', () => {
+  vi.useFakeTimers();
+  const busy = copyNotice([], { pending: true, anchor: { left: 40, top: 160, bottom: 180 } });
+  expect(busy.textContent).toBe('复制中…'); expect(busy.querySelector('svg')).toBeNull();
+  const notice = copyNotice([], { anchor: { left: 40, top: 160, bottom: 180 } });
+  expect(busy.isConnected).toBe(false); expect(notice.style.left).toBe('40px');
+  expect(parseFloat(notice.style.top)).toBeLessThan(160);
+  expect(notice.querySelector('svg path')!.getAttribute('d')).toBe('M3 8l3 3 7-7');
+  expect(notice.textContent).toBe('已复制');
+  vi.advanceTimersByTime(2500); expect(notice.isConnected).toBe(false);
+});
+it('keeps a selection-edge acknowledgement visible below the text and falls back when there is no selection', () => {
+  vi.useFakeTimers(); window.getSelection()!.removeAllRanges(); expect(copyNoticeAnchor()).toBeNull();
+  const edge = copyNotice([], { anchor: { left: innerWidth + 20, top: 0, bottom: 20 } });
+  expect(edge.style.top).toBe('28px'); expect(parseFloat(edge.style.left)).toBeLessThanOrEqual(innerWidth - 8);
+  const fallback = copyNotice([], { anchor: null }); expect(fallback.style.top).toBe('24px');
+});
+it('confirms editor copy on the original button with a regular icon and supports another copy', async () => {
+  clipboard(); const write = vi.fn().mockResolvedValue([]); const panel = openRichEditor(html('<p>Sample</p>'), write);
+  const button = panel.querySelector<HTMLButtonElement>('[aria-label="贴妥智能复制"]')!;
+  button.click(); expect(button.textContent).toBe('复制中…');
+  await vi.waitFor(() => expect(button.textContent).toBe('已复制'));
+  expect(button.querySelector('svg path')!.getAttribute('d')).toBe('M3 8l3 3 7-7'); expect(button.disabled).toBe(false);
+  button.click(); await vi.waitFor(() => expect(write).toHaveBeenCalledTimes(2));
+  expect(JSON.stringify(write.mock.calls[0][0])).not.toMatch(/已复制|copy-check|M3 8/);
 });

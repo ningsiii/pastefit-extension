@@ -21,13 +21,13 @@ const show = (node: Node = document.querySelector('strong')!) => {
 it('offers explicit copy without changing selection or writing automatically', async () => {
   const write = vi.fn().mockResolvedValue(undefined); dispose = mountSelectionToolbar(write);
   show(); expect(host().style.display).toBe('block'); expect(write).not.toHaveBeenCalled();
-  const down = new MouseEvent('mousedown', { cancelable: true }); button('智能复制').dispatchEvent(down);
+  const down = new MouseEvent('mousedown', { cancelable: true }); button('复制').dispatchEvent(down);
   expect(down.defaultPrevented).toBe(true); expect(window.getSelection()!.toString()).toBe('Selected');
-  button('智能复制').click(); await Promise.resolve();
+  button('复制').click(); await Promise.resolve();
   expect(write).toHaveBeenCalledTimes(1); expect(host().shadowRoot!.textContent).toContain('已复制');
 });
 it('retains captured document for editing and hides toolbar', () => {
-  const edit = vi.fn(); dispose = mountSelectionToolbar(vi.fn(), edit); show(); button('编辑 / Emoji').click();
+  const edit = vi.fn(); dispose = mountSelectionToolbar(vi.fn(), edit); show(); button('编辑').click();
   expect(edit).toHaveBeenCalledTimes(1); expect(JSON.stringify(edit.mock.calls[0][0])).toContain('Selected'); expect(host().style.display).toBe('none');
 });
 it('handles keyboard select-all within an answer without intercepting the key', () => {
@@ -39,7 +39,7 @@ it('handles keyboard select-all within an answer without intercepting the key', 
   expect(event.defaultPrevented).toBe(false); expect(host().style.display).toBe('block');
 });
 it('reports failure without claiming success', async () => {
-  dispose = mountSelectionToolbar(vi.fn().mockRejectedValue(new Error('denied'))); show(); button('智能复制').click(); await Promise.resolve();
+  dispose = mountSelectionToolbar(vi.fn().mockRejectedValue(new Error('denied'))); show(); button('复制').click(); await Promise.resolve();
   expect(host().shadowRoot!.querySelector('output')!.textContent).toContain('复制失败');
 });
 it('supports recognized Markdown source with the existing parser', () => {
@@ -58,7 +58,7 @@ it('recognizes the current assistant-message wrapper without legacy article/role
   document.body.innerHTML = '<div data-markdown-text-style="assistant-message"><div data-markdown-copy="contents"><div data-code-block="true"><div data-code-block-source="true"><code class="block whitespace-pre!"><span><span class="hljs-section"># Fixture</span>\n\n<span class="hljs-strong">**Important**</span>\n\n| Key | Value |\n| --- | --- |\n| A | 123 |</span></code></div></div></div></div>';
   const edit = vi.fn(); dispose = mountSelectionToolbar(vi.fn(), edit);
   show(document.querySelector('code > span')!);
-  expect(host().style.display).toBe('block'); button('编辑 / Emoji').click();
+  expect(host().style.display).toBe('block'); button('编辑').click();
   expect(edit).toHaveBeenCalledTimes(1);
   expect(edit.mock.calls[0][0].children.map((node: { type: string }) => node.type)).toEqual(['heading', 'paragraph', 'table']);
 });
@@ -80,7 +80,7 @@ it('anchors to visible selected text when the selection ends outside the viewpor
     { left: 30, right: 200, top: innerHeight + 200, bottom: innerHeight + 220 }
   ] });
   dispose = mountSelectionToolbar(); show(); expect(host().style.display).toBe('block');
-  expect(parseFloat(host().style.top)).toBe(90);
+  expect(parseFloat(host().style.top)).toBe(52);
 });
 it('clips code selection geometry to its internal scroll container', () => {
   document.body.innerHTML = '<article data-turn="assistant"><div style="overflow-y:auto"><code class="block whitespace-pre!"><span class="hljs-section"># Heading</span>\n<span class="hljs-strong">**Bold**</span></code></div></article>';
@@ -91,7 +91,7 @@ it('clips code selection geometry to its internal scroll container', () => {
     { left: 30, right: 200, top: 300, bottom: 320 }
   ] });
   dispose = mountSelectionToolbar(); show(document.querySelector('code')!);
-  expect(host().style.display).toBe('block'); expect(parseFloat(host().style.top)).toBe(90);
+  expect(host().style.display).toBe('block'); expect(parseFloat(host().style.top)).toBe(52);
 });
 it('observes mouseup even when the page stops its bubbling', () => {
   dispose = mountSelectionToolbar(); const strong = document.querySelector('strong')!;
@@ -109,8 +109,6 @@ it('still hides when all selected text is clipped out of view', () => {
 });
 it.each([
   '<article data-turn="user"><strong>Selected</strong></article>',
-  '<article data-turn="assistant"><p>Plain text</p></article>',
-  '<article data-turn="assistant"><pre><code class="language-python">print(123)</code></pre></article>',
   '<article data-turn="assistant"><div contenteditable="true"><strong>Selected</strong></div></article>',
   '<article data-turn="assistant"><a href="#"><strong>Selected</strong></a></article>',
   '<dialog open><article data-turn="assistant"><strong>Selected</strong></article></dialog>'
@@ -129,17 +127,18 @@ it('does not show while an input is focused or across different answers', () => 
   window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range); document.dispatchEvent(new MouseEvent('mouseup')); vi.advanceTimersByTime(200);
   expect(host().style.display).toBe('none');
 });
-it('dismisses on scroll, selection changes and Escape; pause lasts until remount', () => {
+it('dismisses on scroll, selection changes, Escape and close without pausing the page', () => {
   dispose = mountSelectionToolbar(); show(); window.dispatchEvent(new Event('scroll')); expect(host().style.display).toBe('none');
   show(); document.dispatchEvent(new Event('selectionchange')); expect(host().style.display).toBe('none');
   show(); document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape' })); expect(host().style.display).toBe('none');
-  show(); button('本页停用').click(); show(); expect(host().style.display).toBe('none');
-  dispose(); dispose = mountSelectionToolbar(); show(); expect(host().style.display).toBe('block');
+  show(); button('×').click(); expect(host().style.display).toBe('none');
+  show(); expect(host().style.display).toBe('block');
+  expect([...host().shadowRoot!.querySelectorAll('button')].map(node => node.textContent)).toEqual(['复制', '编辑', '×']);
 });
 it('cleans up duplicate mounts and refuses changed source text', () => {
   dispose = mountSelectionToolbar(); const write = vi.fn(); dispose = mountSelectionToolbar(write);
   expect(document.querySelectorAll('[data-pastefit-selection-toolbar]')).toHaveLength(1); show();
-  document.querySelector('strong')!.textContent = 'Changed'; button('智能复制').click(); expect(write).not.toHaveBeenCalled();
+  document.querySelector('strong')!.textContent = 'Changed'; button('复制').click(); expect(write).not.toHaveBeenCalled();
 });
 it('leaves native copy alone, limits large selections and clamps to the viewport', () => {
   dispose = mountSelectionToolbar(); show();
@@ -158,4 +157,125 @@ it('opens Emoji directly and inserts and undoes an added emoji', () => {
   panel.querySelector('[role="textbox"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, bubbles: true, cancelable: true }));
   expect(panel.querySelector('[role="textbox"]')!.textContent).toBe('Text');
   expect(numberedEmojis).toHaveLength(10); expect(commonEmojis).toHaveLength(24);
+});
+
+it.each([false, true])('offers ordinary Chinese/English prose with backward=%s and copies the exact selection', async backward => {
+  document.body.innerHTML = '<div data-markdown-text-style="assistant-message"><p>普通正文 Plain text 123</p></div>';
+  const write = vi.fn().mockResolvedValue(undefined); dispose = mountSelectionToolbar(write);
+  const text = document.querySelector('p')!.firstChild!;
+  const selection = window.getSelection()!; selection.removeAllRanges();
+  if (backward) selection.setBaseAndExtent(text, text.textContent!.length, text, 0);
+  else selection.setBaseAndExtent(text, 0, text, text.textContent!.length);
+  document.dispatchEvent(new MouseEvent('mouseup')); vi.advanceTimersByTime(200);
+  expect(host().style.display).toBe('block');
+  button('复制').click(); await Promise.resolve();
+  expect(write).toHaveBeenCalledTimes(1);
+  expect(JSON.stringify(write.mock.calls[0][0])).toContain('普通正文 Plain text 123');
+  expect(selection.toString()).toBe('普通正文 Plain text 123');
+});
+it('opens plain prose and ordinary source code for local editing without requiring markup', () => {
+  document.body.innerHTML = '<article data-turn="assistant"><p>Plain text</p><pre><code class="language-python">print(123)</code></pre></article>';
+  const edit = vi.fn(); dispose = mountSelectionToolbar(vi.fn(), edit);
+  for (const node of document.querySelectorAll('p,code')) {
+    show(node); expect(host().style.display).toBe('block'); button('编辑').click();
+  }
+  expect(edit).toHaveBeenCalledTimes(2);
+});
+it('keeps a single-character or whitespace-only selection quiet', () => {
+  document.body.innerHTML = '<article data-turn="assistant"><p>A</p></article>';
+  dispose = mountSelectionToolbar(); show(document.querySelector('p')!); expect(host().style.display).toBe('none');
+  document.querySelector('p')!.textContent = '   '; show(document.querySelector('p')!); expect(host().style.display).toBe('none');
+});
+
+it.each([false, true])('positions above the first visible selected line regardless of backward=%s', backward => {
+  document.body.innerHTML = '<article data-turn="assistant"><p>First line and last line</p></article>';
+  const text = document.querySelector('p')!.firstChild!;
+  Object.defineProperty(Range.prototype, 'getClientRects', { configurable: true, value: () => [
+    { left: 40, right: 260, top: 100, bottom: 120 },
+    { left: 40, right: 180, top: 200, bottom: 220 }
+  ] });
+  dispose = mountSelectionToolbar();
+  vi.spyOn(host(), 'getBoundingClientRect').mockReturnValue({ width: 130, height: 28 } as DOMRect);
+  const selection = window.getSelection()!; selection.removeAllRanges();
+  if (backward) selection.setBaseAndExtent(text, text.textContent!.length, text, 0);
+  else selection.setBaseAndExtent(text, 0, text, text.textContent!.length);
+  document.dispatchEvent(new MouseEvent('mouseup')); vi.advanceTimersByTime(200);
+  expect(host().style.top).toBe('64px'); expect(host().style.left).toBe('40px');
+  expect(parseFloat(host().style.top) + 28).toBeLessThan(100);
+});
+it('keeps the toolbar reachable when the selected text touches the viewport top', () => {
+  Object.defineProperty(Range.prototype, 'getClientRects', { configurable: true, value: () => [
+    { left: 30, right: 200, top: 0, bottom: 20 }
+  ] });
+  dispose = mountSelectionToolbar();
+  vi.spyOn(host(), 'getBoundingClientRect').mockReturnValue({ width: 130, height: 28 } as DOMRect);
+  show(); expect(host().style.top).toBe('28px');
+});
+
+
+const obstacle = (left: number, top: number, width: number, height: number) => {
+  const node = document.createElement('button'); node.textContent = 'Native selection action';
+  vi.spyOn(node, 'getBoundingClientRect').mockReturnValue({ left, top, right: left + width, bottom: top + height, width, height } as DOMRect);
+  document.body.append(node); return node;
+};
+it('moves sideways above selection and reserves the close-button width', () => {
+  obstacle(30, 24, 180, 28);
+  dispose = mountSelectionToolbar();
+  vi.spyOn(host(), 'getBoundingClientRect').mockReturnValue({ width: 130, height: 28 } as DOMRect);
+  show(); expect(host().style.top).toBe('24px'); expect(host().style.left).toBe('218px');
+});
+it('falls below selection when native tools occupy the full row above', () => {
+  obstacle(0, 20, innerWidth, 35);
+  dispose = mountSelectionToolbar();
+  vi.spyOn(host(), 'getBoundingClientRect').mockReturnValue({ width: 130, height: 28 } as DOMRect);
+  show(); expect(host().style.top).toBe('88px');
+});
+it('does not cover native controls when neither row has space', () => {
+  obstacle(0, 0, innerWidth, innerHeight);
+  dispose = mountSelectionToolbar();
+  vi.spyOn(host(), 'getBoundingClientRect').mockReturnValue({ width: 130, height: 28 } as DOMRect);
+  show(); expect(host().style.display).toBe('none');
+});
+it('repositions when the website inserts its selection tool after ours', async () => {
+  dispose = mountSelectionToolbar();
+  vi.spyOn(host(), 'getBoundingClientRect').mockReturnValue({ width: 130, height: 28 } as DOMRect);
+  show(); expect(host().style.left).toBe('30px');
+  const native = obstacle(30, 24, 180, 28);
+  await Promise.resolve(); vi.advanceTimersByTime(40);
+  expect(host().style.left).toBe('218px'); expect(native.isConnected).toBe(true);
+  expect(window.getSelection()!.toString()).toBe('Selected');
+});
+it('ignores hidden and distant native controls', () => {
+  obstacle(30, 24, 180, 28).style.visibility = 'hidden'; obstacle(0, 400, innerWidth, 30);
+  dispose = mountSelectionToolbar();
+  vi.spyOn(host(), 'getBoundingClientRect').mockReturnValue({ width: 130, height: 28 } as DOMRect);
+  show(); expect(host().style.left).toBe('30px'); expect(host().style.top).toBe('24px');
+});
+
+it('keeps an avoided button still when a native hover tool disappears before clicking', async () => {
+  const native = obstacle(30, 24, 180, 28);
+  const edit = vi.fn(); dispose = mountSelectionToolbar(vi.fn(), edit);
+  vi.spyOn(host(), 'getBoundingClientRect').mockReturnValue({ width: 130, height: 28 } as DOMRect);
+  show(); expect(host().style.left).toBe('218px');
+  native.remove(); await Promise.resolve(); vi.advanceTimersByTime(40);
+  expect(host().style.left).toBe('218px');
+  button('编辑').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, composed: true, cancelable: true }));
+  button('编辑').click(); expect(edit).toHaveBeenCalledTimes(1);
+});
+
+it('confirms copying inside the capsule then restores its label without moving it', async () => {
+  const write = vi.fn().mockResolvedValue(undefined); dispose = mountSelectionToolbar(write); show();
+  const copy = button('复制'); const left = host().style.left; const top = host().style.top;
+  copy.click(); expect(copy.textContent).toBe('复制中…'); expect(copy.disabled).toBe(true);
+  await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+  expect(copy.textContent).toBe('已复制'); expect(copy.disabled).toBe(false);
+  expect(host().style.left).toBe(left); expect(host().style.top).toBe(top);
+  vi.advanceTimersByTime(2000); expect(copy.textContent).toBe('复制');
+});
+it('shows a failed copy on the same button and allows retry', async () => {
+  const write = vi.fn().mockRejectedValueOnce(new Error('denied')).mockResolvedValue(undefined);
+  dispose = mountSelectionToolbar(write); show(); const copy = button('复制'); copy.click();
+  await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+  expect(copy.textContent).toBe('复制失败'); expect(copy.disabled).toBe(false);
+  copy.click(); await Promise.resolve(); expect(copy.textContent).toBe('已复制');
 });

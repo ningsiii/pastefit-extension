@@ -16,4 +16,4 @@ input:focus-visible{outline:2px solid #ffaf36;outline-offset:3px}
 .status:empty{display:none}
 .manage{display:block;width:100%;margin-top:8px;padding:5px 0;border:0;background:transparent;text-align:left;color:#0876ed;font:inherit;cursor:pointer}
 .manage:focus-visible{outline:2px solid #ffaf36}
-footer{margin-top:5px;text-align:right;font-size:10px;color:#7182a0}
+footer{margin-top:5px;text-align:center;font-size:10px;color:#7182a0}

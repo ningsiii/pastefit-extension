@@ -1,5 +1,5 @@
 import { addSite, deleteSite, enableSite, syncSites } from '../extension/site-access';
-import { sitePattern, storedSites } from '../extension/site-settings';
+import { sitePattern, storedSites, restrictedPageMessage } from '../extension/site-settings';
 
 export const mountSiteManager = async (root: HTMLElement): Promise<void> => {
   root.innerHTML = '<header><img src="icons/icon48.png" alt="贴妥"><div><h1>网站管理</h1><p>只在你授权并开启的网站显示选区浮条</p></div><small data-version></small></header><form><label for="site-url">添加网站</label><div class="line"><input id="site-url" type="text" placeholder="例如 example.com 或 HTTPS 链接" required><button type="submit">授权并添加</button></div><p class="hint">按域名管理，不含子域名。添加后默认关闭；开启后请刷新网页。仅支持 HTTPS。</p></form><label for="site-search">搜索已添加的网站</label><input id="site-search" type="search" placeholder="输入域名，筛选下方已添加的网站"><p role="status"></p><ul aria-label="网站列表"></ul><p class="hint">关闭保留授权，删除同时撤销授权。不会保存聊天内容、对话路径或查询参数。</p>';
@@ -20,13 +20,15 @@ export const mountSiteManager = async (root: HTMLElement): Promise<void> => {
       const label = document.createElement('label');
       const name = document.createElement('span'); name.textContent = entry.host;
       const toggle = document.createElement('input'); toggle.type = 'checkbox'; toggle.setAttribute('role', 'switch'); toggle.setAttribute('aria-label', `${entry.host}浮条`);
-      toggle.checked = entry.enabled && entry.granted; toggle.disabled = busy;
+      const restriction = restrictedPageMessage(`https://${entry.host}/`);
+      toggle.checked = !restriction && entry.enabled && entry.granted; toggle.disabled = busy || Boolean(restriction);
       toggle.addEventListener('change', () => { void perform(() => enableSite(entry.host, toggle.checked), '已更新开关；新开启的网站请刷新网页'); });
       label.append(name, toggle);
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '删除'; remove.setAttribute('aria-label', `删除 ${entry.host}`); remove.disabled = busy;
       remove.addEventListener('click', () => { void perform(() => deleteSite(entry.host), '已删除并撤销授权'); });
       row.append(label, remove);
-      if (!entry.granted) { const note = document.createElement('small'); note.textContent = '未授权，开启时重新申请'; row.append(note); }
+      if (restriction) { const note = document.createElement('small'); note.textContent = restriction; row.append(note); }
+      else if (!entry.granted) { const note = document.createElement('small'); note.textContent = '未授权，开启时重新申请'; row.append(note); }
       list.append(row);
     }
   };

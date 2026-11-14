@@ -44,7 +44,7 @@ it('escapes arbitrary source in WPS HTML and never converts code literals into f
   expect(parsed.querySelector('img')).toBeNull(); expect(parsed.body.textContent).toContain('<img src=x onerror=alert(1)>');
 });
 
-const findButton = (panel: HTMLElement, text: string) => [...panel.querySelectorAll('button')].find(b => b.textContent === text)!;
+const findButton = (panel: HTMLElement, text: string) => [...panel.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') === text || b.textContent === text))!;
 const enableWps = async (panel: HTMLElement, checked = true) => {
   const input = panel.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
   await vi.waitFor(() => expect(input.disabled).toBe(false));

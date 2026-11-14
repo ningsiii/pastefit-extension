@@ -10,7 +10,7 @@ describe('extension policy', () => {
     expect(manifest).not.toHaveProperty('host_permissions');
     expect(manifest.optional_host_permissions).toEqual(['https://*/*']);
     expect(manifest.options_ui).toEqual({ page: 'options.html', open_in_tab: true });
-    expect(manifest.version).toBe('0.1.1');
+    expect(manifest.version).toBe('0.1.2');
   });
 
   it('has no forbidden remote or code-generation features in project sources', async () => {

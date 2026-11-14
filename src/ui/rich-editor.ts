@@ -11,6 +11,7 @@ import { commonEmojis, commonSymbols, numberedEmojis, pointSymbols } from './edi
 import { makePanelDraggable } from './draggable-panel';
 import { brandImage } from './brand';
 import { createFormulaTools } from './formula-tools';
+import { confirmCopy, copyBlue } from './copy-feedback';
 
 export const openRichEditor = (initial: SemanticDocument, write = writeDocument, initialGroup: 'symbols' | 'emoji' = 'symbols'): HTMLDialogElement => {
   const existing = document.querySelector('[data-pastefit-rich-editor]');
@@ -22,7 +23,8 @@ export const openRichEditor = (initial: SemanticDocument, write = writeDocument,
   panel.style.cssText = 'width:min(1100px,calc(100vw - 32px));height:min(820px,calc(100dvh - 32px));max-height:calc(100dvh - 32px);box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;padding:0;border:1px solid #cbd5e1;border-radius:14px;background:white;color:#18202a;box-shadow:0 16px 64px #0f172a40;font:16px/1.6 sans-serif;';
   let disposeHistory = (): void => undefined; let disposeSettings = (): void => undefined;
   let stopDragging = (): void => undefined;
-  const close = (): void => { stopDragging(); disposeHistory(); disposeSettings(); panel.remove(); opener?.focus(); };
+  let feedbackTimer = 0;
+  const close = (): void => { window.clearTimeout(feedbackTimer); stopDragging(); disposeHistory(); disposeSettings(); panel.remove(); opener?.focus(); };
   const title = document.createElement('h2'); title.textContent = '贴妥编辑'; title.style.cssText = 'margin:0;font-size:20px;font-weight:650;color:#1e2c50';
   const header = document.createElement('div'); header.style.cssText = 'flex:none;position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid #e2e8f0;background:#f8fbff';
   const closeButton = document.createElement('button'); closeButton.type = 'button'; closeButton.textContent = '×'; closeButton.title = '关闭'; closeButton.setAttribute('aria-label', '关闭编辑器');
@@ -76,7 +78,7 @@ export const openRichEditor = (initial: SemanticDocument, write = writeDocument,
   editor.addEventListener('drop', (event) => { event.preventDefault(); });
   const button = (label: string, action: () => void): HTMLButtonElement => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
-    b.style.cssText = 'font:inherit;padding:7px 11px;margin:3px;border:1px solid #dfe6f2;border-radius:10px;background:#fff;color:#1e2c50;cursor:pointer';
+    b.style.cssText = 'font:inherit;padding:7px 11px;margin:3px;border:1px solid #dfe6f2;border-radius:10px;background:linear-gradient(135deg,#fff,#f8fbff);color:#1e2c50;cursor:pointer';
     b.addEventListener('click', action); return b;
   };
   const toolbar = document.createElement('div'); toolbar.setAttribute('aria-label', '符号与 Emoji'); toolbar.style.cssText = 'border:1px solid #dfe6f2;border-radius:14px;background:white;padding:10px';
@@ -88,7 +90,7 @@ export const openRichEditor = (initial: SemanticDocument, write = writeDocument,
     tabButtons.forEach((tab, tabIndex) => {
       const active = tabIndex === index;
       tab.setAttribute('aria-selected', String(active));
-      tab.style.background = active ? '#e7f0ff' : '#fff';
+      tab.style.background = active ? 'linear-gradient(120deg,#e1f6ff,#edf0ff)' : 'linear-gradient(135deg,#fff,#f8fbff)';
       tab.style.borderColor = active ? '#0b66e4' : '#cbd5e1';
       tab.style.color = active ? '#084da9' : '#334155';
       groupPanels[tabIndex].hidden = !active;
@@ -125,24 +127,28 @@ export const openRichEditor = (initial: SemanticDocument, write = writeDocument,
   const editorBar = document.createElement('div'); editorBar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none';
   const editorLabel = document.createElement('strong'); editorLabel.textContent = '编辑内容'; editorLabel.style.cssText = 'font:600 13px/1.5 sans-serif;color:#42536b';
   const copiedFeedback = (warnings: readonly string[]): void => {
-    feedback.textContent = warnings.length ? '已复制 · 有格式提示' : '已复制'; feedback.title = warnings.join('\n');
+    const result = document.createElement('span'); result.textContent = warnings.length ? '已复制 · 有格式提示' : '已复制';
+    if (!warnings.length) result.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
+    feedback.replaceChildren(result); feedback.title = warnings.join('\n');
+    confirmCopy(documentCopy);
+    feedbackTimer = window.setTimeout(() => { if (panel.isConnected) documentCopy.textContent = '贴妥智能复制'; }, 2000);
   };
   const actions = document.createElement('div');
   let copying = false;
   const copy = async (): Promise<void> => {
-    if (copying) return; copying = true; documentCopy.disabled = true;
+    if (copying) return; copying = true; window.clearTimeout(feedbackTimer); documentCopy.disabled = true; documentCopy.textContent = '复制中…';
     try {
-      feedback.textContent = '正在复制…';
+      feedback.textContent = '';
       await (await settingsReady).flush();
       wpsCompatible = await getWpsFormulaPreference();
       if (!visual && reviewedHtml !== editor.innerHTML && inspectDocument(currentDocument(), 'auto').findings.some(finding => finding.suspicious)) {
-        enterReview(); feedback.textContent = ''; return;
+        enterReview(); feedback.textContent = ''; documentCopy.textContent = '贴妥智能复制'; return;
       }
       const copyMode = wpsCompatible ? 'wps' : 'smart';
       const reviewed = Boolean(visual || reviewedHtml === editor.innerHTML);
       const warnings = write === writeDocument ? await writeDocument(currentDocument(), copyMode, undefined, reviewed, wpsCompatible) : await write(currentDocument(), copyMode);
       copiedFeedback(warnings ?? []);
-    } catch (error) { feedback.textContent = error instanceof Error ? `复制失败：${error.message}` : '复制失败，请重试。'; }
+    } catch (error) { documentCopy.textContent = '复制失败'; feedback.textContent = error instanceof Error ? `复制失败：${error.message}` : '复制失败，请重试。'; }
     finally { copying = false; documentCopy.disabled = false; }
   };
   actions.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none';
@@ -168,7 +174,8 @@ export const openRichEditor = (initial: SemanticDocument, write = writeDocument,
   });
   check.setAttribute('aria-pressed', 'false');
   const documentCopy = button('贴妥智能复制', () => { void copy(); });
-  documentCopy.style.cssText += ';background:linear-gradient(120deg,#078af7,#0966df);border-color:#0876ed;color:white;font-weight:650;padding-inline:18px';
+  documentCopy.setAttribute('aria-label', '贴妥智能复制');
+  documentCopy.style.cssText += `;display:flex;align-items:center;justify-content:center;gap:6px;min-width:150px;border:0;border-radius:999px;background:${copyBlue};color:white;font-weight:650;padding:9px 18px;box-shadow:inset 0 1px 1px #ffffffb3,0 2px 5px #18202a12`;
   const formulaTools = createFormulaTools(feedback, editor); refreshFormulas = formulaTools.refresh;
   editorBar.append(editorLabel, check);
   actions.append(feedback, documentCopy);
@@ -177,6 +184,6 @@ export const openRichEditor = (initial: SemanticDocument, write = writeDocument,
   body.append(toolbar, editorBar, editor, visualHost, formulaTools.element, actions); panel.append(header, body); document.body.append(panel);
   if (typeof panel.showModal === 'function') panel.showModal(); else panel.setAttribute('open', '');
   stopDragging = makePanelDraggable(panel, header);
-  panel.addEventListener('pastefit:dispose', () => { disposeHistory(); disposeSettings(); });
+  panel.addEventListener('pastefit:dispose', () => { window.clearTimeout(feedbackTimer); disposeHistory(); disposeSettings(); });
   editor.focus(); return panel;
 };

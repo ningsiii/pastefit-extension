@@ -4,7 +4,7 @@ import { normalizeHtml } from '../../src/core/normalize-html';
 import { wpsFormulaKey } from '../../src/clipboard/formula-preference';
 
 const html = (content: string) => normalizeHtml({ kind: 'html', content }).document;
-const click = (root: HTMLElement, label: string) => [...root.querySelectorAll('button')].find(b => b.textContent === label)!.click();
+const click = (root: HTMLElement, label: string) => [...root.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') === label || b.textContent === label))!.click();
 const key = (editor: HTMLElement, redo = false) => editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', metaKey: true, shiftKey: redo, bubbles: true, cancelable: true }));
 const setup = () => {
   let pref = false;

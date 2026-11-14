@@ -5,18 +5,14 @@ import { reviewedCopy as writeDocument, CopyCancelled } from '../clipboard/revie
 import type { SemanticDocument } from '../core/semantic-document';
 import { openRichEditor } from './rich-editor';
 import { sites } from '../extension/site-settings';
-import { brandImage } from './brand';
+import { confirmCopy, copyBlue } from './copy-feedback';
 
 const marker = 'data-pastefit-selection-toolbar';
 const excluded = 'input,textarea,[contenteditable]:not([contenteditable="false"]),[role="textbox"],button,a,dialog,[data-pastefit-editor-panel]';
 const elementOf = (node: Node): Element | null => node instanceof Element ? node : node.parentElement;
-const hasFormatting = (doc: SemanticDocument): boolean => doc.children.some(block =>
-  ['heading', 'list', 'table', 'quote'].includes(block.type) ||
-  (block.type === 'paragraph' && block.children.some(inline => ['strong', 'emphasis', 'delete', 'underline', 'superscript', 'subscript', 'math'].includes(inline.type))));
-
 // Range rectangles include text clipped by nested scrolling containers. Anchor
-// only to visible selected text, not the last logical line of a long code block.
-const visibleAnchor = (range: Range): { left: number; bottom: number } | null => {
+// only to visible selected text, above the first visible line of the selection.
+const visibleAnchor = (range: Range): { left: number; top: number; bottom: number } | null => {
   let left = 0; let right = innerWidth; let top = 0; let bottom = innerHeight;
   for (let ancestor = elementOf(range.commonAncestorContainer); ancestor; ancestor = ancestor.parentElement) {
     const css = getComputedStyle(ancestor);
@@ -29,10 +25,11 @@ const visibleAnchor = (range: Range): { left: number; bottom: number } | null =>
   }
   if (left >= right || top >= bottom) return null;
   const rects = [...range.getClientRects()];
-  for (let index = rects.length - 1; index >= 0; index--) {
+  for (let index = 0; index < rects.length; index++) {
     const rect = rects[index];
     if (rect.bottom <= top || rect.top >= bottom || rect.right <= left || rect.left >= right) continue;
-    return { left: Math.max(left, rect.left), bottom: Math.min(bottom, rect.bottom) };
+    return { left: Math.max(left, rect.left), top: Math.max(top, rect.top),
+      bottom: Math.min(bottom, Math.max(...rects.filter(line => line.bottom > top && line.top < bottom && line.right > left && line.left < right).map(line => line.bottom))) };
   }
   return null;
 };
@@ -47,21 +44,39 @@ export const mountSelectionToolbar = (
   host.style.cssText = 'all:initial;position:fixed;z-index:2147483646;display:none;';
   const root = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
-  style.textContent = ':host{color-scheme:light} .bar{box-sizing:border-box;max-width:calc(100vw - 16px);display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:5px;background:#fff;border:1px solid #dbe4ef;border-radius:10px;box-shadow:0 4px 18px #18202a22;font:13px/1.5 sans-serif;color:#18202a} button{font:inherit;border:0;border-radius:6px;padding:6px 8px;background:transparent;color:inherit;cursor:pointer} button:hover,button:focus-visible{background:#e7f0ff} button:focus-visible{outline:2px solid #0b66e4} button:disabled{opacity:.5} .primary{background:#0b66e4;color:#fff} .quiet{font-size:12px;color:#64748b} output{width:100%;max-width:280px;padding:0 6px}';
+  style.textContent = `
+    :host{color-scheme:light}
+    .bar{box-sizing:border-box;max-width:calc(100vw - 16px);display:flex;flex-wrap:wrap;align-items:center;gap:0;font:12px/1.5 sans-serif;color:#18202a}
+    .actions{position:relative;display:flex;overflow:hidden;border-radius:999px;background:#fffffff5;backdrop-filter:blur(8px);filter:drop-shadow(0 2px 5px #18202a12)}
+    .actions::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 1px 1px #ffffffb3,inset 0 -1px 1px #ffffff40;background:linear-gradient(180deg,#ffffff26,transparent 35%,transparent 75%,#ffffff0d)}
+    button{display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:28px;font:inherit;font-weight:600;border:0;padding:4px 12px;cursor:pointer;white-space:nowrap;text-shadow:0 1px 2px #24416b66}
+    button:focus-visible{outline:2px solid #18202a;outline-offset:-3px}
+    button:disabled{opacity:.5}
+    .primary{width:80px;gap:4px;padding:4px 8px;background:${copyBlue};color:#fff;padding-right:17px;clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+    .primary:hover{filter:brightness(1.04)}
+    .edit{background:linear-gradient(115deg,#fff3d2aa 0%,#fff6be18 45%,#ffffff20 100%),linear-gradient(145deg,#ffe580e6 0%,#ffb12ce6 33%,#ff891ae6 70%,#ff5d32e6 100%);color:#fff;padding-left:17px;margin-left:-8px;clip-path:polygon(10px 0,100% 0,100% 100%,0 100%)}
+    .edit:hover{filter:brightness(1.04)}
+    .quiet{min-width:24px;min-height:24px;margin-left:3px;padding:2px 6px;border-radius:50%;background:transparent;color:#64748b;text-shadow:none;opacity:0;visibility:hidden;transition:opacity .12s}
+    .bar:hover .quiet,.bar:focus-within .quiet{opacity:1;visibility:visible}
+    .quiet:hover{background:#e9edf5cc}
+    output{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    @media(hover:none){.quiet{opacity:1;visibility:visible}}
+    @media(prefers-reduced-motion:reduce){.quiet{transition:none}}
+  `;
   const bar = document.createElement('div'); bar.className = 'bar'; bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', '贴妥选区操作');
-  style.textContent += ' .bar{border-radius:16px;border-color:#dfe6f2;box-shadow:0 6px 24px #1e2c501c;padding:7px;gap:5px;color:#1e2c50}.primary{background:linear-gradient(120deg,#078af7,#0966df)}.primary:hover,.primary:focus-visible{background:#075ab9}button{border-radius:10px}button:focus-visible{outline-color:#ff9c29}';
-  bar.append(brandImage(26));
-  root.append(style, bar); document.body.append(host);
+  const actions = document.createElement('div'); actions.className = 'actions';
+  bar.append(actions); root.append(style, bar); document.body.append(host);
   let current: SemanticDocument | null = null;
   let sourceRange: Range | null = null;
   let sourceText = '';
   let timer = 0;
-  let paused = false;
   let disposed = false;
   let generation = 0;
+  let feedbackTimer = 0;
+  let placement: { left: number; top: number } | null = null;
   const hide = (): void => {
-    window.clearTimeout(timer); generation++; current = null; sourceRange = null; sourceText = '';
-    host.style.display = 'none';
+    window.clearTimeout(timer); window.clearTimeout(feedbackTimer); generation++; current = null; sourceRange = null; sourceText = '';
+    placement = null; host.style.display = 'none';
   };
   const valid = (): boolean => Boolean(sourceRange?.startContainer.isConnected && sourceRange.endContainer.isConnected && sourceRange.toString() === sourceText);
   const status = document.createElement('output'); status.setAttribute('role', 'status');
@@ -70,22 +85,67 @@ export const mountSelectionToolbar = (
     node.addEventListener('mousedown', event => event.preventDefault());
     node.addEventListener('click', action); bar.append(node); return node;
   };
-  const copy = button('智能复制', () => {
+  const copy = button('复制', () => {
     if (!current || !valid()) { hide(); return; }
-    const doc = current; const version = generation; copy.disabled = true;
-    void write(doc).then((warnings) => { if (generation === version) { status.textContent = '已复制'; if (warnings?.length) copyNotice(warnings); } }, (error: unknown) => {
-      if (generation === version) status.textContent = error instanceof CopyCancelled ? error.message : '复制失败，请点编辑后重试';
-    }).finally(() => { copy.disabled = false; });
+    const doc = current; const version = generation; window.clearTimeout(feedbackTimer); copy.disabled = true; copy.textContent = '复制中…';
+    void write(doc).then((warnings) => { if (generation === version) { status.textContent = '已复制'; confirmCopy(copy); feedbackTimer = window.setTimeout(() => { if (generation === version) copy.textContent = '复制'; }, 2000); if (warnings?.length) copyNotice(warnings); } }, (error: unknown) => {
+      if (generation === version) {
+        status.textContent = error instanceof CopyCancelled ? error.message : '复制失败，请点编辑后重试';
+        copy.textContent = error instanceof CopyCancelled ? '已取消' : '复制失败';
+        copy.title = status.textContent;
+      }
+    }).finally(() => { if (generation === version) copy.disabled = false; });
   }, 'primary');
-  button('编辑 / Emoji', () => {
+  copy.title = '贴妥智能复制'; copy.setAttribute('aria-label', '贴妥智能复制');
+  const editButton = button('编辑', () => {
     if (!current || !valid()) { hide(); return; }
     const doc = current; hide(); edit(doc);
-  });
-  button('本页停用', () => { paused = true; hide(); }, 'quiet').title = '本页不再弹出；刷新后恢复，右键仍可用';
+  }, 'edit');
+  editButton.title = '编辑内容、添加符号与 Emoji'; editButton.setAttribute('aria-label', '贴妥编辑');
+  actions.append(copy, editButton);
   const close = button('×', hide, 'quiet'); close.setAttribute('aria-label', '关闭选区浮条');
   bar.append(status);
+  // Reserve the entire bar, including the normally invisible close button.
+  // Never hide or intercept the page's own selection tools.
+  const position = (): void => {
+    if (!current || !sourceRange || !valid()) return;
+    const anchor = visibleAnchor(sourceRange);
+    if (!anchor) { host.style.display = 'none'; return; }
+    host.style.display = 'block';
+    const size = host.getBoundingClientRect();
+    const obstacles = [...document.querySelectorAll('button,[role="button"],[role="toolbar"],[role="menu"],[role="dialog"]')]
+      .filter(node => node !== host && !host.contains(node))
+      .filter(node => { const css = getComputedStyle(node); return css.display !== 'none' && css.visibility !== 'hidden'; })
+      .map(node => node.getBoundingClientRect())
+      .filter(rect => rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth);
+    const clear = (left: number, top: number): boolean => left >= 8 && left + size.width <= innerWidth - 8 && top >= 8 && top + size.height <= innerHeight - 8 && !obstacles.some(rect => left < rect.right + 6 && left + size.width > rect.left - 6 && top < rect.bottom + 6 && top + size.height > rect.top - 6);
+    // Keep a safe placement for this selection. Native hover tools may vanish
+    // as the pointer approaches us; snapping back would move the button away
+    // between pointerdown and click.
+    if (placement && clear(placement.left, placement.top)) return;
+    const maxLeft = innerWidth - size.width - 8;
+    const preferredLeft = Math.max(8, Math.min(anchor.left, maxLeft));
+    const xs = [preferredLeft, ...obstacles.flatMap(rect => [rect.right + 8, rect.left - size.width - 8])]
+      .filter(x => x >= 8 && x <= maxLeft).sort((a, b) => Math.abs(a - preferredLeft) - Math.abs(b - preferredLeft));
+    for (const top of [anchor.top - size.height - 8, anchor.bottom + 8]) {
+      if (top < 8 || top + size.height > innerHeight - 8) continue;
+      for (const left of xs) {
+        if (obstacles.some(rect => left < rect.right + 6 && left + size.width > rect.left - 6 && top < rect.bottom + 6 && top + size.height > rect.top - 6)) continue;
+        placement = { left, top }; host.style.left = `${left}px`; host.style.top = `${top}px`; return;
+      }
+    }
+    // Crowded viewports keep native controls usable; right-click remains available.
+    host.style.display = 'none';
+  };
+  let layoutTimer = 0;
+  const observer = new MutationObserver(records => {
+    if (!current || records.every(record => record.target === host || host.contains(record.target))) return;
+    window.clearTimeout(layoutTimer);
+    layoutTimer = window.setTimeout(position, 30);
+  });
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
   const update = (): void => {
-    if (disposed || paused || document.querySelector('dialog[open],[data-pastefit-editor-panel]')) return;
+    if (disposed || document.querySelector('dialog[open],[data-pastefit-editor-panel]')) return;
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || selection.rangeCount !== 1) return;
     const range = selection.getRangeAt(0);
@@ -98,17 +158,14 @@ export const mountSelectionToolbar = (
     if (range.cloneContents().querySelector(excluded)) return;
     try {
       const input = captureSelection(); if (!input) return;
-      const doc = normalize(input).document; if (!hasFormatting(doc)) return;
+      const doc = normalize(input).document;
       const rect = visibleAnchor(range);
       if (!rect) return;
-      current = doc; sourceRange = range.cloneRange(); sourceText = text; status.textContent = ''; copy.disabled = false;
-      host.style.display = 'block';
-      const size = host.getBoundingClientRect();
-      host.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - size.width - 8))}px`;
-      host.style.top = `${Math.max(8, Math.min(rect.bottom + 10, innerHeight - size.height - 8))}px`;
+      current = doc; sourceRange = range.cloneRange(); sourceText = text; status.textContent = ''; copy.disabled = false; copy.textContent = '复制'; copy.title = '贴妥智能复制';
+      position();
     } catch { hide(); }
   };
-  const schedule = (): void => { hide(); if (!paused) timer = window.setTimeout(update, 180); };
+  const schedule = (): void => { hide(); timer = window.setTimeout(update, 180); };
   // A browser may deliver selectionchange after mouseup. The pending update
   // reads the latest selection; only dismiss an already displayed snapshot.
   const changed = (): void => { if (current && document.activeElement !== host) hide(); };
@@ -125,7 +182,7 @@ export const mountSelectionToolbar = (
   document.addEventListener('keyup', key, true);
   window.addEventListener('scroll', hide, true); window.addEventListener('resize', hide); window.addEventListener('blur', hide);
   const dispose = (): void => {
-    disposed = true; hide(); host.remove();
+    disposed = true; observer.disconnect(); window.clearTimeout(layoutTimer); hide(); host.remove();
     document.removeEventListener('selectionchange', changed); document.removeEventListener('mousedown', down, true);
     document.removeEventListener('mouseup', up, true); document.removeEventListener('keyup', key, true);
     window.removeEventListener('scroll', hide, true); window.removeEventListener('resize', hide); window.removeEventListener('blur', hide);
